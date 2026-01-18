@@ -14,9 +14,9 @@
  */
 class Board {
 private:
-    static const int BOARD_WIDTH;
-    static const int BOARD_HEIGHT;
-    static const int CELL_SIZE;
+    static constexpr int BOARD_WIDTH = 10;
+    static constexpr int BOARD_HEIGHT = 20;
+    static constexpr int CELL_SIZE = 30;
     
     std::vector<std::vector<int>> grid;
     // TODO: Dodać zmienne do przechowywania kolorów komórek

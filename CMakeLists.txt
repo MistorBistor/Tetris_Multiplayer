@@ -12,8 +12,16 @@ find_package(SFML 2.5.1 COMPONENTS system window graphics audio REQUIRED)
 # Ustaw katalogi z plikami nagłówkowymi
 include_directories(include)
 
-# Zbierz wszystkie pliki źródłowe
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+# Lista wszystkich plików źródłowych
+set(SOURCES
+    src/main.cpp
+    src/GameEngine.cpp
+    src/Board.cpp
+    src/Tetromino.cpp
+    src/Score.cpp
+    src/Menu.cpp
+    src/FileManager.cpp
+)
 
 # Utwórz plik wykonywalny
 add_executable(tetris ${SOURCES})

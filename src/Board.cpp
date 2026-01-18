@@ -1,9 +1,5 @@
 #include "Board.hpp"
 
-const int Board::BOARD_WIDTH = 10;
-const int Board::BOARD_HEIGHT = 20;
-const int Board::CELL_SIZE = 30;
-
 Board::Board() {
     // TODO: Inicjalizacja zmiennych
 }
