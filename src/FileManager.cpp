@@ -41,24 +41,15 @@ void FileManager::deleteSave() const {
 void FileManager::saveHighScore(int highScore) const {
     // TODO: Otworzyć plik HIGHSCORE_FILE do zapisu
     // TODO: Zapisać wartość highScore
-    std::ofstream file(HIGHSCORE_FILE);
-    if (file.is_open()) {
-        file << highScore;
-        file.close();
-    }
+    // TODO: Obsłużyć błędy zapisu
 }
 
 int FileManager::loadHighScore() const {
     // TODO: Otworzyć plik HIGHSCORE_FILE do odczytu
     // TODO: Wczytać i zwrócić wartość highScore
     // TODO: Jeśli plik nie istnieje, zwrócić 0
-    std::ifstream file(HIGHSCORE_FILE);
-    int score = 0;
-    if (file.is_open()) {
-        file >> score;
-        file.close();
-    }
-    return score;
+    // TODO: Obsłużyć błędy odczytu
+    return 0;
 }
 
 void FileManager::saveSettings(const std::vector<std::pair<std::string, std::string>>& settings) const {
