@@ -1,12 +1,12 @@
 # Tetris w C++ z SFML
 
-Klasyczna gra Tetris zaimplementowana w C++ z wykorzystaniem biblioteki SFML.
+Struktura projektu dla klasycznej gry Tetris w C++ z wykorzystaniem biblioteki SFML.
 
 ## Opis
 
 Tetris to klasyczna gra logiczna, w której gracz układa spadające klocki (tetromino) w linie. Celem gry jest uzyskanie jak największej liczby punktów poprzez usuwanie zapełnionych linii. Gra przyspiesza wraz ze wzrostem poziomu trudności.
 
-### Funkcjonalności
+### Planowane funkcjonalności
 
 - Klasyczna rozgrywka Tetris z siedmioma typami klocków
 - System punktacji z poziomami trudności

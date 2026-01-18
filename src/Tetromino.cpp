@@ -6,12 +6,21 @@ Tetromino::Tetromino(TetrominoType type) : type(type), currentRotation(0), x(0),
     // TODO: Na podstawie typu, zainicjalizować kształt i kolor
     // TODO: I-piece: cyan, O-piece: yellow, T-piece: purple,
     //       S-piece: green, Z-piece: red, J-piece: blue, L-piece: orange
+    
+    // Tymczasowa inicjalizacja, aby zapobiec niezdefiniowanemu zachowaniu
+    shape = {{0}};
+    color = sf::Color::White;
 }
 
 Tetromino::Tetromino() : currentRotation(0), x(0), y(0) {
     // TODO: Zainicjalizować generator liczb losowych (jeśli nie został)
     // TODO: Wylosować typ tetromino (0-6)
     // TODO: Wywołać konstruktor z typem
+    
+    // Tymczasowa inicjalizacja
+    type = TetrominoType::I;
+    shape = {{0}};
+    color = sf::Color::White;
 }
 
 Tetromino::~Tetromino() {
