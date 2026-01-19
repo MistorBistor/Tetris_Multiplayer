@@ -1,4 +1,4 @@
-#include "Menu.hpp"
+#include "Menu.h"
 
 Menu::Menu() : currentState(MenuState::MAIN_MENU), selectedIndex(0) {
   // TODO: Inicjalizacja zmiennych

@@ -1,54 +1,66 @@
-#include "Board.hpp"
+#include "Board.h"
 
-Board::Board() {
-  // TODO: Inicjalizacja zmiennych
+// Offset oznacza pozycję planszy (Board) w oknie, czyli margines boczny
+Board::Board() : offsetX(100), offsetY(50) {
+  // Inicjalizacja pustej siatki, zgodnie z definicją w Board.h
+  grid.resize(ROWS, std::vector<int>(COLS, 0));
 }
 
-Board::~Board() {
-  // TODO: Cleanup jeśli potrzebne
+void Board::render(sf::RenderWindow& window) {
+  // Rysujemy siatkę
+  sf::RectangleShape cell(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
+
+  for (int row = 0; row < ROWS; row++) {
+    for (int col = 0; col < COLS; col++) {
+      cell.setPosition(offsetX + col * CELL_SIZE, offsetY + row * CELL_SIZE);
+
+      if (grid[row][col] == 0) {
+        // Pusta komórka
+        cell.setFillColor(sf::Color::White);
+        cell.setOutlineThickness(1);
+        cell.setOutlineColor(sf::Color::Black);
+      } else {
+        // Zablokowany klocek
+        cell.setFillColor(sf::Color::Cyan);
+        cell.setOutlineThickness(0);
+      }
+
+      window.draw(cell);
+    }
+  }
 }
 
-void Board::initialize() {
-  // TODO: Zainicjalizować siatkę grid (BOARD_WIDTH x BOARD_HEIGHT)
-  // TODO: Wypełnić wszystkie komórki wartością 0 (puste)
+/**
+ * Sprawdza czy pozycja jest prawidłowa (wewnątrz planszy i nie zajęta).
+ */
+bool Board::isValidPosition(int x, int y) const {
+  if (x < 0 || x >= COLS || y >= ROWS) {
+    return false;
+  }
+
+  if (y < 0) {
+    return true;  // pozwalamy na pozycje powyżej planszy
+  }
+
+  return grid[y][x] == 0;
 }
 
-bool Board::canPlaceTetromino(const Tetromino& tetromino, int x, int y) const {
-  // TODO: Pobrać kształt tetromino
-  // TODO: Sprawdzić czy każdy blok tetromino:
-  //       - mieści się w granicach planszy
-  //       - nie nachodzi na zajęte komórki
-  // TODO: Zwrócić true jeśli może być umieszczone, false w przeciwnym razie
-  return false;
-}
+/**
+ * Blokowanie klocka na planszy oznacza ustawienie odpowiednich komórek w
+ * siatce na 1.
+ */
+void Board::lockTetromino(int x, int y,
+                          const std::vector<std::vector<int>>& shape) {
+  for (int row = 0; row < 4; row++) {
+    for (int col = 0; col < 4; col++) {
+      if (shape[row][col] == 1) {
+        int boardX = x + col;
+        int boardY = y + row;
 
-void Board::placeTetromino(const Tetromino& tetromino, int x, int y) {
-  // TODO: Pobrać kształt i kolor tetromino
-  // TODO: Dla każdego bloku tetromino:
-  //       - zapisać wartość w grid na odpowiedniej pozycji
-}
-
-int Board::clearFullLines() {
-  // TODO: Przeszukać wszystkie wiersze od dołu do góry
-  // TODO: Dla każdego zapełnionego wiersza:
-  //       - usunąć wiersz
-  //       - przesunąć wszystkie wiersze powyżej w dół
-  // TODO: Zwrócić liczbę usuniętych linii
-  return 0;
-}
-
-bool Board::isGameOver() const {
-  // TODO: Sprawdzić czy górne wiersze są zajęte
-  // TODO: Sprawdzić czy można umieścić nowy tetromino
-  return false;
-}
-
-void Board::clear() {
-  // TODO: Wyczyścić wszystkie komórki siatki
-}
-
-void Board::render(sf::RenderWindow& window) const {
-  // TODO: Dla każdej komórki w grid:
-  //       - jeśli zajęta, narysować kolorowy kwadrat
-  // TODO: Narysować linie siatki (opcjonalnie)
+        if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+          grid[boardY][boardX] = 1;
+        }
+      }
+    }
+  }
 }

@@ -2,7 +2,6 @@
 #define SCORE_HPP
 
 #include <SFML/Graphics.hpp>
-#include <string>
 
 /**
  * @class Score

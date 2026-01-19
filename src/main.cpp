@@ -1,31 +1,19 @@
 #include <iostream>
 
-/**
- * @brief Punkt wejścia aplikacji Tetris
- *
- * Tworzy i uruchamia silnik gry.
- */
+#include "GameEngine.h"
+
 int main() {
   try {
-    // TODO: Utworzyć instancję GameEngine
-    // GameEngine engine;
+    GameEngine engine;
 
-    // TODO: Zainicjalizować silnik gry
-    // engine.initialize();
-
-    // TODO: Uruchomić główną pętlę gry
-    // engine.run();
-
-    // TODO: Zamknąć grę
-    // engine.shutdown();
-
-    std::cout << "Tetris - Gra w fazie rozwoju" << std::endl;
-    std::cout << "TODO: Zaimplementować GameEngine i uruchomić grę"
-              << std::endl;
+    engine.initialize();
+    engine.run();
+    engine.shutdown();
 
     return 0;
   } catch (const std::exception& e) {
-    std::cerr << "Wystąpił błąd: " << e.what() << std::endl;
+    std::cerr << "Wystąpił błąd: " << e.what() << '\n';
+
     return 1;
   }
 }

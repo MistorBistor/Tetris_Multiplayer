@@ -21,7 +21,7 @@ file(GLOB_RECURSE SOURCES
 # Collect all header files for clang-format
 file(GLOB_RECURSE HEADERS
     "${CMAKE_SOURCE_DIR}/include/*.h"
-    "${CMAKE_SOURCE_DIR}/include/*.hpp"
+    "${CMAKE_SOURCE_DIR}/include/*.h"
 )
 
 # Create executable

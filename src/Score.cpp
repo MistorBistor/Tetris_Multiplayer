@@ -1,4 +1,4 @@
-#include "Score.hpp"
+#include "Score.h"
 
 Score::Score() : currentScore(0), level(1), linesCleared(0), highScore(0) {
   // TODO: Inicjalizacja zmiennych

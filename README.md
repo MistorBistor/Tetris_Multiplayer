@@ -63,7 +63,7 @@ podstawy-informatyki-gra/
 │   ├── Score.hpp
 │   ├── Menu.hpp
 │   └── FileManager.hpp
-├── resources/        # Zasoby (czcionki, tekstury, dźwięki)
+├── resources/        # Potencjalne zasoby (czcionki, tekstury, dźwięki itp.)
 ├── docs/             # Dokumentacja
 ├── build/            # Katalog budowania (generowany)
 ├── CMakeLists.txt    # Konfiguracja CMake
