@@ -1,6 +1,6 @@
-# Podstawy informatyki - Gra
+# Podstawy informatyki - gra
 
-Strukturę projektu wygenerował GitHub Copilot na podstawie opisu projektu.
+Wstępną strukturę projektu wygenerował GitHub Copilot.
 
 ### Planowane funkcjonalności
 
@@ -57,17 +57,17 @@ podstawy-informatyki-gra/
 │   ├── Menu.cpp
 │   └── FileManager.cpp
 ├── include/          # Pliki nagłówkowe - przede wszystkim deklaracje
-│   ├── GameEngine.hpp
-│   ├── Board.hpp
-│   ├── Tetromino.hpp
-│   ├── Score.hpp
-│   ├── Menu.hpp
-│   └── FileManager.hpp
+│   ├── GameEngine.h
+│   ├── Board.h
+│   ├── Tetromino.h
+│   ├── Score.h
+│   ├── Menu.h
+│   └── FileManager.h
 ├── resources/        # Potencjalne zasoby (czcionki, tekstury, dźwięki itp.)
 ├── docs/             # Dokumentacja
 ├── build/            # Katalog budowania (generowany)
 ├── CMakeLists.txt    # Konfiguracja CMake
-├── .clang-format     # Konfiguracja formatowania kodu
+├── .clang-format     # Konfiguracja formatowania kodu (styl wg Google)
 ├── .gitignore
 ├── LICENSE           # Licencja MIT
 └── README.md         # Ten plik
@@ -75,27 +75,27 @@ podstawy-informatyki-gra/
 
 ## Moduły gry
 
-### GameEngine (Silnik gry)
+### GameEngine (silnik gry)
 
-Główny moduł zarządzający pętlą gry, zdarzeniami i koordynacją innych modułów.
+Serce gry. Zarządza pętlą gry (game loop), zdarzeniami i koordynacją wszystkich innych modułów.
 
-### Board (Plansza)
+### Board (plansza)
 
-Zarządza siatką planszy gry, wykrywaniem kolizji i usuwaniem zapełnionych linii.
+Plansza, siatka 10x20, na której odbywa się rozgrywka. Wykrywanie kolizji, usuwanie zapełnionych linii.
 
-### Tetromino (Klocki)
+### Tetromino (klocki)
 
-Reprezentuje klocki Tetris, ich kształty, kolory i rotacje.
+Reprezentuje klocki Tetris, ich kształty, kolory i rotacje (w sumie 7 rodzajów). Obracanie i przesuwanie klocków.
 
-### Score (Punktacja)
+### Score (punktacja)
 
-System punktacji, poziomów trudności i rekordów.
+System punktacji, poziomów trudności i rekordów. Aktualizacja wyniku i poziomu w trakcie gry.
 
-### Menu (Menu)
+### Menu
 
-Menu główne, menu pauzy i ekran końca gry.
+Interfejs menu głównego, menu pauzy i ekran końca gry. Nawigacja i wybór opcji.
 
-### FileManager (Zarządzanie plikami)
+### FileManager (zarządzanie plikami)
 
 Zapis i odczyt stanu gry, najwyższych wyników i ustawień.
 
@@ -110,13 +110,35 @@ Zapis i odczyt stanu gry, najwyższych wyników i ustawień.
 
 Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](LICENSE).
 
-## TODO
+## TODO (podział prac)
 
-- [ ] Implementacja silnika gry i głównej pętli
-- [ ] Implementacja logiki planszy i wykrywania kolizji
-- [ ] Implementacja klocków Tetris i ich rotacji
-- [ ] Implementacja systemu punktacji
-- [ ] Implementacja menu i interfejsu użytkownika
-- [ ] Implementacja zapisu i odczytu plików
-- [ ] Dodanie zasobów (czcionki, tekstury, dźwięki)
-- [ ] Testy i debugowanie
+- [x] Implementacja silnika gry i głównej pętli
+- [x] Implementacja logiki planszy (siatka, renderowanie)
+- [x] Implementacja wykrywania kolizji (dno, boki)
+- [x] Implementacja podstawowego klocka (I-shape)
+- [x] Implementacja grawitacji i spadania
+- [x] Implementacja blokowania klocka na planszy
+- [x] Implementacja ekranu Game Over
+
+---
+
+- [ ] Implementacja wszystkich 7 kształtów klocków (I, O, T, S, Z, J, L)
+- [ ] Implementacja systemu kolorów dla każdego klocka
+- [ ] Implementacja losowania typu klocka
+- [ ] Implementacja sterowania (lewo, prawo, w dół, hard drop)
+- [ ] Implementacja rotacji klocków (algorytm SRS)
+- [ ] Implementacja wall kick przy rotacji
+- [ ] Rozszerzenie `Board::grid` o przechowywanie typów klocków
+- [ ] Rozszerzenie `Board::render()` o kolorowe renderowanie
+
+---
+
+- [ ] Implementacja wykrywania pełnych linii
+- [ ] Implementacja usuwania linii i opadania bloków
+- [ ] Implementacja systemu punktacji (100/300/500/800 pkt)
+- [ ] Implementacja poziomów trudności
+- [ ] Implementacja przyspieszania gry z poziomem
+- [ ] Implementacja wyświetlania wyniku (prawy panel)
+- [ ] Implementacja menu startowego
+- [ ] Implementacja tekstowego Game Over z wynikiem
+- [ ] Dodanie czcionki do `resources/`
