@@ -25,7 +25,7 @@ file(GLOB_RECURSE HEADERS
 )
 
 # Create executable
-add_executable(tetris ${SOURCES})
+add_executable(tetris ${SOURCES} "include/TetrominoType.h")
 
 # Use target_include_directories instead of include_directories (modern CMake)
 target_include_directories(tetris PRIVATE include)

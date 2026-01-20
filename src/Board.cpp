@@ -1,9 +1,27 @@
+#include <iostream>
 #include "Board.h"
+
+/**
+ * Zwraca kolor na podstawie typu klocka.
+ * Używamy tych samych kolorów co w Tetromino.
+ */
+sf::Color getColorForType (TetrominoType type) {
+    switch (type) {
+    case TetrominoType::I: return sf::Color::Cyan;
+    case TetrominoType::O: return sf::Color::Yellow;
+    case TetrominoType::T: return sf::Color::Magenta;
+    case TetrominoType::S: return sf::Color::Green;
+    case TetrominoType::Z: return sf::Color::Red;
+    case TetrominoType::J: return sf::Color::Blue;
+    case TetrominoType::L: return sf::Color (255, 165, 0);  // Orange
+    default: return sf::Color::White;  // Empty lub nieznany
+    }
+}
 
 // Offset oznacza pozycję planszy (Board) w oknie, czyli margines boczny
 Board::Board() : offsetX(100), offsetY(50) {
   // Inicjalizacja pustej siatki, zgodnie z definicją w Board.h
-  grid.resize(ROWS, std::vector<int>(COLS, 0));
+  grid.resize(ROWS, std::vector<TetrominoType>(COLS, TetrominoType::Empty));
 }
 
 void Board::render(sf::RenderWindow& window) {
@@ -14,15 +32,16 @@ void Board::render(sf::RenderWindow& window) {
     for (int col = 0; col < COLS; col++) {
       cell.setPosition(offsetX + col * CELL_SIZE, offsetY + row * CELL_SIZE);
 
-      if (grid[row][col] == 0) {
-        // Pusta komórka
-        cell.setFillColor(sf::Color::White);
-        cell.setOutlineThickness(1);
-        cell.setOutlineColor(sf::Color::Black);
-      } else {
-        // Zablokowany klocek
-        cell.setFillColor(sf::Color::Cyan);
-        cell.setOutlineThickness(0);
+      if (grid[row][col] == TetrominoType::Empty) {
+          // Pusta komórka
+          cell.setFillColor (sf::Color::White);
+          cell.setOutlineThickness (1);
+          cell.setOutlineColor (sf::Color::Black);
+      }
+      else {
+          // Zablokowany klocek - użyj koloru na podstawie typu
+          cell.setFillColor (getColorForType (grid[row][col]));
+          cell.setOutlineThickness (0);
       }
 
       window.draw(cell);
@@ -42,7 +61,7 @@ bool Board::isValidPosition(int x, int y) const {
     return true;  // pozwalamy na pozycje powyżej planszy
   }
 
-  return grid[y][x] == 0;
+  return grid[y][x] == TetrominoType::Empty;
 }
 
 /**
@@ -50,7 +69,7 @@ bool Board::isValidPosition(int x, int y) const {
  * siatce na 1.
  */
 void Board::lockTetromino(int x, int y,
-                          const std::vector<std::vector<int>>& shape) {
+                          const std::vector<std::vector<int>>& shape, TetrominoType type) {
   for (int row = 0; row < 4; row++) {
     for (int col = 0; col < 4; col++) {
       if (shape[row][col] == 1) {
@@ -58,9 +77,41 @@ void Board::lockTetromino(int x, int y,
         int boardY = y + row;
 
         if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
-          grid[boardY][boardX] = 1;
+            grid[boardY][boardX] = type;
+
+            std::cout << "[Board] Blokuję komórkę (" << boardX << ", " << boardY
+                << ") typu " << static_cast<int> (type) << '\n';
         }
       }
     }
   }
+}
+/**
+ * Sprawdza czy cały klocek może być umieszczony w danej pozycji.
+ * Iteruje przez wszystkie wypełnione komórki klocka (wartość 1)
+ * i sprawdza czy każda z nich jest w prawidłowej pozycji.
+ */
+bool Board::canPlaceTetromino (int x, int y,
+    const std::vector<std::vector<int>>& shape) const {
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            if (shape[row][col] == 1) {  // Tylko wypełnione komórki
+                int boardX = x + col;
+                int boardY = y + row;
+
+                // Sprawdź czy nie wychodzi poza planszę (lewo, prawo, dół)
+                if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
+                    std::cout << "[Board] Kolizja: poza planszą (" << boardX << ", " << boardY << ")\n";
+                    return false;
+                }
+
+                // Pozwalamy na pozycje powyżej planszy (podczas spawnu)
+                if (boardY >= 0 && grid[boardY][boardX] != TetrominoType::Empty) {
+                    std::cout << "[Board] Kolizja: zajęta komórka (" << boardX << ", " << boardY << ")\n";
+                    return false;
+                }
+            }
+        }
+    }
+    return true;  // Wszystkie komórki są OK
 }

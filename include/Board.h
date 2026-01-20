@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include "TetrominoType.h"
 
 class Board {
  private:
@@ -12,11 +13,12 @@ class Board {
   int offsetY;
 
   // Siatka: 0 = puste, 1 = zajęte
-  std::vector<std::vector<int>> grid;
+  std::vector<std::vector<TetrominoType>> grid;
 
  public:
   Board();  // konstruktor
   void render(sf::RenderWindow& window);
   bool isValidPosition(int x, int y) const;
-  void lockTetromino(int x, int y, const std::vector<std::vector<int>>& shape);
+  void lockTetromino(int x, int y, const std::vector<std::vector<int>>& shape, TetrominoType type);
+  bool canPlaceTetromino (int x, int y, const std::vector<std::vector<int>>& shape) const;
 };

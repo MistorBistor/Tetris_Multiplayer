@@ -1,12 +1,17 @@
 #include "GameEngine.h"
 
 #include <iostream>
+#include <random>
+#include <ctime>
 
 GameEngine::GameEngine() : window(sf::VideoMode(500, 700), "Tetris") {}
 
 void GameEngine::initialize() {
   isRunning = true;
   gameState = GameState::Playing;
+
+  //podać TYP klocka przy tworzeniu
+  currentTetromino = Tetromino (TetrominoType::I);
 
   std::cout << "Inicjalizacja gry" << '\n';
 }
@@ -26,14 +31,18 @@ void GameEngine::run() {
   }
 }
 
-void GameEngine::handleEvents() {
-  sf::Event event;
+void GameEngine::handleEvents () {
+    sf::Event event;
+    while (window.pollEvent (event)) {
+        if (event.type == sf::Event::Closed) {
+            window.close ();
+        };
 
-  while (window.pollEvent(event)) {
-    if (event.type == sf::Event::Closed) {
-      window.close();
+        // Obsługa klawiatury - tylko gdy gra trwa
+        if (gameState == GameState::Playing && event.type == sf::Event::KeyPressed) {
+            handleKeyPress (event.key.code);
+        }
     }
-  }
 }
 
 /**
@@ -43,27 +52,49 @@ void GameEngine::handleEvents() {
  * resetujemy fallTimer i przesuwamy aktualny klocek Tetromino o jedną
  * jednostkę w dół.
  */
-void GameEngine::update(float deltaTime) {
-  fallTimer += deltaTime;
+void GameEngine::update (float deltaTime) {
+    fallTimer += deltaTime;
 
-  if (fallTimer >= fallSpeed) {
-    fallTimer = 0.0f;
+    // Automatyczne spadanie co fallSpeed sekund
+    if (fallTimer >= fallSpeed) {
+        fallTimer = 0.0f;
+        std::cout << "Klocek spada: y = " << currentTetromino.getY () << '\n';
+        currentTetromino.moveDown ();
 
-    std::cout << "Klocek spada: y = " << currentTetromino.getY() << '\n';
-    currentTetromino.moveDown();
+        if (checkCollision ()) {
+            // Klocek dotknął dna/innego klocka
+            currentTetromino.moveUp ();  // Cofnij ruch
 
-    if (checkCollision()) {
-      // Klocek spadł za nisko, cofamy ruch
-      currentTetromino.moveUp();
-
-      lockTetromino();
-
-      // FIXME: Gra nie powinna się kończyć w tym miejscu
-      gameState = GameState::GameOver;
-
-      std::cout << "GAME OVER - klocek dotknął dna" << '\n';
+            if (!isLocking) {
+                // Rozpocznij lock delay
+                std::cout << "[GameEngine] Klocek dotknął dna - start lock delay\n";
+                isLocking = true;
+                lockTimer = 0.0f;
+            }
+        }
+        else {
+            // Klocek nadal spada - anuluj lock delay jeśli był aktywny
+            if (isLocking) {
+                std::cout << "[GameEngine] Klocek znów spada - anuluj lock delay\n";
+                isLocking = false;
+                lockTimer = 0.0f;
+            }
+        }
     }
-  }
+
+    // Obsługa lock delay
+    if (isLocking) {
+        lockTimer += deltaTime;
+
+        if (lockTimer >= lockDelay) {
+            // Czas minął - zablokuj klocek
+            std::cout << "[GameEngine] Lock delay zakończony - blokuję klocek\n";
+            lockTetromino ();
+            spawnNewTetromino ();
+            isLocking = false;
+            lockTimer = 0.0f;
+        }
+    }
 }
 
 void GameEngine::render() {
@@ -108,7 +139,7 @@ void GameEngine::lockTetromino() {
   int tetrominoX = currentTetromino.getX();
   int tetrominoY = currentTetromino.getY();
 
-  board.lockTetromino(tetrominoX, tetrominoY, shape);
+  board.lockTetromino (tetrominoX, tetrominoY, shape, currentTetromino.getType ());
   std::cout << "Klocek został zablokowany na planszy, pozycja: (" << tetrominoX
             << ", " << tetrominoY << ")\n";
 }
@@ -119,4 +150,127 @@ void GameEngine::renderGameOver() {
   overlay.setPosition(0, 0);
   overlay.setFillColor(sf::Color(0, 0, 0, 150));
   window.draw(overlay);
+}
+
+/**
+ * Obsługuje wciśnięcie klawisza przez gracza.
+ * Strzałki: lewo, prawo, dół
+ * Spacja: hard drop (spadnięcie na sam dół)
+ */
+void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
+    // Zapisujemy obecną pozycję - może się przyda jeśli będzie kolizja
+    int oldX = currentTetromino.getX ();
+    int oldY = currentTetromino.getY ();
+
+    // Obsługa poszczególnych klawiszy
+    if (key == sf::Keyboard::Left) {
+        std::cout << "[Input] Gracz naciska: LEWO\n";
+        currentTetromino.moveLeft ();
+
+        // Sprawdź kolizję po ruchu
+        if (checkCollision ()) {
+            std::cout << "[Input] Kolizja! Cofam ruch w lewo\n";
+            currentTetromino.moveRight ();  // Cofnij ruch (wróć do oldX)
+        }
+        else {
+            // Udany ruch - resetuj lock timer
+            if (isLocking) {
+                lockTimer = 0.0f;
+                std::cout << "[Input] Reset lock timer po ruchu\n";
+            }
+        }
+    }
+    else if (key == sf::Keyboard::Up) {
+        std::cout << "[Input] Gracz naciska: GÓRA (rotacja)\n";
+
+        // Zapisz stary kształt na wypadek kolizji
+        auto oldShape = currentTetromino.getShape ();
+
+        // Wykonaj rotację
+        currentTetromino.rotate ();
+
+        // Sprawdź kolizję po rotacji
+        if (checkCollision ()) {
+            std::cout << "[Input] Kolizja po rotacji! Przywracam stary kształt\n";
+            // Cofnij rotację - obróć 3 razy (3×90° = 270° = -90°)
+            currentTetromino.rotate ();
+            currentTetromino.rotate ();
+            currentTetromino.rotate ();
+        }
+        else {
+            // Udany ruch - resetuj lock timer
+            if (isLocking) {
+                lockTimer = 0.0f;
+                std::cout << "[Input] Reset lock timer po ruchu\n";
+            }
+        }
+    }
+    else if (key == sf::Keyboard::Right) {
+        std::cout << "[Input] Gracz naciska: PRAWO\n";
+        currentTetromino.moveRight ();
+
+        // Sprawdź kolizję po ruchu
+        if (checkCollision ()) {
+            std::cout << "[Input] Kolizja! Cofam ruch w prawo\n";
+            currentTetromino.moveLeft ();  // Cofnij ruch
+        }
+        else {
+            // Udany ruch - resetuj lock timer
+            if (isLocking) {
+                lockTimer = 0.0f;
+                std::cout << "[Input] Reset lock timer po ruchu\n";
+            }
+        }
+    }  
+    else if (key == sf::Keyboard::Down) {
+        std::cout << "[Input] Gracz naciska: DÓŁ (soft drop)\n";
+        currentTetromino.moveDown ();
+
+        // Sprawdź kolizję po ruchu
+        if (checkCollision ()) {
+            std::cout << "[Input] Kolizja! Klocek dotknął dna/innego klocka\n";
+            currentTetromino.moveUp();  // Cofnij ruch
+            lockTetromino();
+            spawnNewTetromino ();  // Stwórz nowy losowy klocek
+        } 
+    } 
+    else if (key == sf::Keyboard::Space) {
+        std::cout << "[Input] Gracz naciska: SPACJA (hard drop)\n";
+        // Hard drop - spadaj aż do kolizji
+        while (!checkCollision ()) {
+            currentTetromino.moveDown ();
+        }  
+        // Cofnij ostatni ruch (był kolizja) i zablokuj
+        currentTetromino.moveUp ();
+        lockTetromino ();
+        spawnNewTetromino ();  // Stwórz nowy losowy klocek  
+    }  
+}
+
+/**
+ * Tworzy nowy losowy klocek i umieszcza go na górze planszy.
+ * Używa prostego losowania - każdy z 7 typów ma równe szanse (1/7).
+ */
+void GameEngine::spawnNewTetromino () {
+    std::cout << "[GameEngine] Tworzenie nowego klocka\n";
+
+    // Generator liczb losowych (static = utworzony raz, pamiętany między wywołaniami)
+    static std::mt19937 generator (static_cast<unsigned int>(std::time (nullptr)));
+
+    // Rozkład jednorodny: losuj liczbę od 0 do 6 (włącznie)
+    std::uniform_int_distribution<int> distribution (0, 6);
+
+    // Wylosuj typ klocka
+    int randomType = distribution (generator);
+
+    std::cout << "[GameEngine] Wylosowano typ: " << randomType << '\n';
+
+    // Konwertuj int na TetrominoType i stwórz nowy klocek
+    currentTetromino = Tetromino (static_cast<TetrominoType>(randomType));
+
+    // Sprawdź czy nowy klocek koliduje od razu (game over jeśli tak)
+    if (checkCollision ()) {
+        std::cout << "[GameEngine] GAME OVER - brak miejsca na nowy klocek!\n";
+        gameState = GameState::GameOver;
+    }
 }
