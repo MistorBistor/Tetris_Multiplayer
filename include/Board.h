@@ -19,4 +19,7 @@ class Board {
   void render(sf::RenderWindow& window);
   bool isValidPosition(int x, int y) const;
   void lockTetromino(int x, int y, const std::vector<std::vector<int>>& shape);
+  bool isLineFull(int row) const;
+  void removeLine(int row);
+  int clearFullLines();
 };
