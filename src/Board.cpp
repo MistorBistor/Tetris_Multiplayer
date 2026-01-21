@@ -118,3 +118,17 @@ int Board::clearFullLines() {
   
   return clearedLines;
 }
+
+/**
+ * Resetuje planszę do stanu początkowego - wszystkie komórki puste.
+ */
+void Board::reset() {
+  
+  // Zerujemy całą siatkę
+  for (int row = 0; row < ROWS; row++) {
+    for (int col = 0; col < COLS; col++) {
+      grid[row][col] = 0;
+    }
+  }
+  
+}
