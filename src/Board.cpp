@@ -122,7 +122,7 @@ bool Board::canPlaceTetromino (int x, int y,
  */
 bool Board::isLineFull(int row) const {
   for (int col = 0; col < COLS; col++) {
-    if (grid[row][col] == 0) {
+	  if (grid[row][col] == TetrominoType::Empty) {
       return false;
     }
   }
@@ -142,7 +142,7 @@ void Board::removeLine(int row) {
   
   // Górna linia (row 0) staje się pusta
   for (int col = 0; col < COLS; col++) {
-    grid[0][col] = 0;
+	  grid[0][col] = TetrominoType::Empty;
   }
 }
 
@@ -168,4 +168,18 @@ int Board::clearFullLines() {
   }
   
   return clearedLines;
+}
+
+/**
+ * Resetuje planszę do stanu początkowego - wszystkie komórki puste.
+ */
+void Board::reset() {
+  
+  // Zerujemy całą siatkę
+  for (int row = 0; row < ROWS; row++) {
+    for (int col = 0; col < COLS; col++) {
+      grid[row][col] = 0;
+    }
+  }
+  
 }

@@ -30,4 +30,6 @@ class Board {
   bool isLineFull(int row) const;
   void removeLine(int row);
   int clearFullLines();
+
+  void reset();
 };
