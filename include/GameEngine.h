@@ -15,6 +15,7 @@ private:
 
     bool isRunning = false;
 
+    // Spadanie klocka
     float fallTimer = 0.0f;
     float fallSpeed = 0.5f; // Im mniejsza wartość, tym szybciej spada klocek
 
@@ -22,60 +23,34 @@ private:
     float lockTimer = 0.0f;
     float lockDelay = 0.5f;
     bool isLocking = false;
- private:
-  sf::RenderWindow window;
-  sf::Clock clock;
-  Menu menu;
-  bool isRunning = false;
-  float fallTimer = 0.0f;
-  /**
-   * Zakres wartości od 0.1 do 1.0 określa jak szybko klocek spada.
-   */
-  float fallSpeed = 0.5f;
-private:
-	sf::RenderWindow window;
-	sf::Clock clock;
-	bool isRunning = false;
-	float fallTimer = 0.0f;
-	float lockTimer = 0.0f;       // Licznik czasu od dotknięcia dna
-	float lockDelay = 0.5f;       // Czas (w sekundach) przed zablokowaniem
-	bool isLocking = false;       // Czy klocek jest w trakcie lock delay?
-	/**
-	 * Zakres wartości od 0.1 do 1.0 określa jak szybko klocek spada.
-	 */
-	float fallSpeed = 0.5f;
 
     enum class GameState { Menu, Playing, Paused, GameOver };
     GameState gameState = GameState::Menu;
-  enum class GameState {Menu, Playing, Paused, GameOver };
-  GameState gameState = GameState::Menu;
-	enum class GameState { Playing, GameOver };
-	GameState gameState = GameState::Playing;
 
-	Board board;
-	Tetromino currentTetromino = Tetromino (TetrominoType::I);  // Inicjalizujemy od razu
+    Board board;
+
+    // Uwaga: brak konstruktora domyślnego Tetromino, więc inicjalizujemy typem
+    Tetromino currentTetromino = Tetromino (TetrominoType::I);
 
 public:
-	GameEngine ();
-	void initialize ();
-	void run ();
-	void shutdown ();
+    GameEngine ();
+    void initialize ();
+    void run ();
+    void shutdown ();
 
 private:
-	void handleEvents ();
-	void update (float deltaTime);
-	void render ();
-	void handleKeyPress (sf::Keyboard::Key key);
+    void handleEvents ();
+    void update (float deltaTime);
+    void render ();
 
-  // Metody pomocnicze
-  bool checkCollision();
-  void lockTetromino();
-  void spawnNewTetromino();
-  void handleMenuSelection();
-  void renderGameOver();
-	// Metody pomocnicze
-	bool checkCollision ();
-	void lockTetromino ();
-	void spawnNewTetromino ();
-	void renderGameOver ();
+    void handleKeyPress (sf::Keyboard::Key key);
+
+    // Metody pomocnicze
+    bool checkCollision ();
+    void lockTetromino ();
+    void spawnNewTetromino ();
+
+    // Menu / UI
+    void handleMenuSelection ();
+    void renderGameOver ();
 };
