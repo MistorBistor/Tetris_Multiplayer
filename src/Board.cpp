@@ -127,8 +127,8 @@ void Board::reset() {
   // Zerujemy całą siatkę
   for (int row = 0; row < ROWS; row++) {
     for (int col = 0; col < COLS; col++) {
-      grid[row][col] = 0;
+      grid[row][col] = TetrominoType::Empty;
     }
   }
-  
+  std::cout << "[Board] Reset planszy - wszystkie komórki ustawione na Empty\n";
 }
