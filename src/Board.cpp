@@ -115,3 +115,57 @@ bool Board::canPlaceTetromino (int x, int y,
     }
     return true;  // Wszystkie komórki są OK
 }
+
+/**
+ * Sprawdza czy dana linia jest cała wypełniona.
+ * Linia jest pełna gdy wszystkie komórki (0 do COLS - 1) są zajęte (!= 0).
+ */
+bool Board::isLineFull(int row) const {
+  for (int col = 0; col < COLS; col++) {
+    if (grid[row][col] == 0) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Usuwa daną linię i opuszcza wszystkie bloki powyżej niej o 1 w dół.
+ */
+void Board::removeLine(int row) {
+  for (int currentRow = row; currentRow > 0; currentRow--) {
+    for (int col = 0; col < COLS; col++) {
+      grid[currentRow][col] = grid[currentRow - 1][col];
+    }
+  }
+  
+  // Górna linia (row 0) staje się pusta
+  for (int col = 0; col < COLS; col++) {
+    grid[0][col] = 0;
+  }
+}
+
+/**
+ * Wykrywa wszystkie pełne linie, usuwa je i zwraca ich liczbę.
+ * Sprawdzamy od dołu do góry, bo po usunięciu linii bloki opadają.
+ */
+int Board::clearFullLines() {
+  int clearedLines = 0;
+  
+  // Sprawdzamy od dołu do góry (ROWS-1 do 0)
+  int row = ROWS - 1;
+  while (row >= 0) {
+    if (isLineFull(row)) {
+      removeLine(row);
+      clearedLines++;
+      // Nie zmniejszamy row, bo po usunięciu linia powyżej "spadła" na to miejsce
+      // i musimy ją też sprawdzić
+    } else {
+      // Linia nie jest pełna, przechodzimy do następnej (wyżej)
+      row--;
+    }
+  }
+  
+  return clearedLines;
+}

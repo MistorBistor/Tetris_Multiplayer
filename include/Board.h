@@ -19,6 +19,15 @@ class Board {
   Board();  // konstruktor
   void render(sf::RenderWindow& window);
   bool isValidPosition(int x, int y) const;
+
+
+
+
+
   void lockTetromino(int x, int y, const std::vector<std::vector<int>>& shape, TetrominoType type);
   bool canPlaceTetromino (int x, int y, const std::vector<std::vector<int>>& shape) const;
+  void lockTetromino(int x, int y, const std::vector<std::vector<int>>& shape);
+  bool isLineFull(int row) const;
+  void removeLine(int row);
+  int clearFullLines();
 };

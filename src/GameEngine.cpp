@@ -60,10 +60,16 @@ void GameEngine::update (float deltaTime) {
         fallTimer = 0.0f;
         std::cout << "Klocek spada: y = " << currentTetromino.getY () << '\n';
         currentTetromino.moveDown ();
+void GameEngine::update(float deltaTime) {
+  fallTimer += deltaTime;
+  if (fallTimer >= fallSpeed) {
+    fallTimer = 0.0f;
 
         if (checkCollision ()) {
             // Klocek dotknął dna/innego klocka
             currentTetromino.moveUp ();  // Cofnij ruch
+    std::cout << "Klocek spada: y" << " = " << currentTetromino.getY() << '\n';
+    currentTetromino.moveDown();
 
             if (!isLocking) {
                 // Rozpocznij lock delay
@@ -95,6 +101,13 @@ void GameEngine::update (float deltaTime) {
             lockTimer = 0.0f;
         }
     }
+      spawnNewTetromino();
+      // FIXME: Gra nie powinna się kończyć w tym miejscu
+      //gameState = GameState::GameOver;
+
+      //std::cout << "GAME OVER - klocek dotknął dna" << '\n';
+    }
+  }
 }
 
 void GameEngine::render() {
@@ -142,6 +155,23 @@ void GameEngine::lockTetromino() {
   board.lockTetromino (tetrominoX, tetrominoY, shape, currentTetromino.getType ());
   std::cout << "Klocek został zablokowany na planszy, pozycja: (" << tetrominoX
             << ", " << tetrominoY << ")\n";
+  
+  // Sprawdź i usuń pełne linie
+  int linesCleared = board.clearFullLines();
+  if (linesCleared > 0) {
+    std::cout << "Wyczyszczono " << linesCleared << " linie!" << '\n';
+  }
+  //Tworzy nowy klocek Tetromino
+  spawnNewTetromino();
+}
+
+/**
+ * Tworzy nowy klocek Tetromino.
+ * Na razie zawsze tworzymy klocek I w pozycji startowej (3, 0).
+ */
+void GameEngine::spawnNewTetromino() {
+  currentTetromino = Tetromino();
+  std::cout << "Nowy klocek utworzony na pozycji (3, 0)" << '\n';
 }
 
 void GameEngine::renderGameOver() {
@@ -274,3 +304,5 @@ void GameEngine::spawnNewTetromino () {
         gameState = GameState::GameOver;
     }
 }
+
+
