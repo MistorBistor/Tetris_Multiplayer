@@ -71,7 +71,7 @@ void Board::lockTetromino(int x, int y,
  */
 bool Board::isLineFull(int row) const {
   for (int col = 0; col < COLS; col++) {
-    if (grid[row][col] == 0) {
+	  if (grid[row][col] == TetrominoType::Empty) {
       return false;
     }
   }
@@ -91,7 +91,7 @@ void Board::removeLine(int row) {
   
   // Górna linia (row 0) staje się pusta
   for (int col = 0; col < COLS; col++) {
-    grid[0][col] = 0;
+	  grid[0][col] = TetrominoType::Empty;
   }
 }
 
