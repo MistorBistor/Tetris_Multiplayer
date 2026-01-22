@@ -326,15 +326,93 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
         spawnNewTetromino ();
     }
     else if (key == sf::Keyboard::Up) {
-        std::cout << "[Input] UP (rotate)\n";
+        std::cout << "[Input] Gracz naciska: GÓRA (rotacja + wall kick)\n";
+
+        // Zapamiętujemy starą pozycję, żeby zawsze móc wrócić
+        const int startX = currentTetromino.getX ();
+        const int startY = currentTetromino.getY ();
+
+        // Obracamy klocek (na chwilę) i sprawdzamy czy da się go "ustawić" kickami
         currentTetromino.rotate ();
-        if (checkCollision ()) {
-            currentTetromino.rotate ();
-            currentTetromino.rotate ();
-            currentTetromino.rotate ();
+
+        // Lista prostych kicków (kolejność ma znaczenie!).
+        // Najpierw próbujemy bez przesunięcia, potem o 1/2 w lewo/prawo,
+        // potem lekko do góry (bo często obrót przy podłodze wymaga podbicia).
+        const std::vector<std::pair<int, int>> kickTests = {
+            { 0,  0},
+            {-1,  0},
+            { 1,  0},
+            {-2,  0},
+            { 2,  0},
+            { 0, -1},
+            {-1, -1},
+            { 1, -1},
+            { 0, -2}
+        };
+
+        auto moveBy = [&](int dx, int dy) {
+            // Uwaga: używamy Twoich metod moveLeft/moveRight/moveUp/moveDown
+            // i robimy to pętlami, żeby nie zmieniać klasy Tetromino.
+            if (dx > 0) {
+                for (int i = 0; i < dx; i++) currentTetromino.moveRight ();
+            }
+            else if (dx < 0) {
+                for (int i = 0; i < -dx; i++) currentTetromino.moveLeft ();
+            }
+
+            if (dy > 0) {
+                for (int i = 0; i < dy; i++) currentTetromino.moveDown ();
+            }
+            else if (dy < 0) {
+                for (int i = 0; i < -dy; i++) currentTetromino.moveUp ();
+            }
+            };
+
+        auto resetToStartPos = [&]() {
+            const int currentX = currentTetromino.getX ();
+            const int currentY = currentTetromino.getY ();
+            moveBy (startX - currentX, startY - currentY);
+            };
+
+        bool rotationPlaced = false;
+
+        for (size_t i = 0; i < kickTests.size (); i++) {
+            // Zawsze zaczynamy próbę od pozycji startowej
+            resetToStartPos ();
+
+            const int kickX = kickTests[i].first;
+            const int kickY = kickTests[i].second;
+
+            // Próbujemy przesunięcie
+            moveBy (kickX, kickY);
+
+            // Jeśli NIE ma kolizji — obrót się udał
+            if (!checkCollision ()) {
+                std::cout << "[WallKick] Rotacja OK, test=" << i
+                    << " kick=(" << kickX << "," << kickY << ")\n";
+                rotationPlaced = true;
+
+                // Udany ruch powinien resetować lock delay (żeby dało się jeszcze manewrować)
+                if (isLocking) {
+                    lockTimer = 0.0f;
+                    std::cout << "[WallKick] Reset lockTimer po udanej rotacji\n";
+                }
+                break;
+            }
+            else {
+                std::cout << "[WallKick] Test nieudany, test=" << i
+                    << " kick=(" << kickX << "," << kickY << ")\n";
+            }
         }
-        else if (isLocking) {
-            lockTimer = 0.0f;
+
+        if (!rotationPlaced) {
+            // Nic nie pasuje — wracamy do pozycji i cofamy obrót (3x rotate = -90 stopni)
+            std::cout << "[WallKick] Rotacja zablokowana - cofanie\n";
+            resetToStartPos ();
+
+            currentTetromino.rotate ();
+            currentTetromino.rotate ();
+            currentTetromino.rotate ();
         }
     }
 }
