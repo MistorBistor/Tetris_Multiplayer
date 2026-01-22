@@ -9,21 +9,23 @@ Menu::~Menu() {
   std::cout << "Menu - destruktor" << std::endl;
 }
 
-/**5
+/**
  * Inicjalizacja menu - ładuje czcionkę i tworzy teksty.
  */
 void Menu::initialize() {
   std::cout << "Menu - inicjalizacja" << std::endl;
   
-  // Ładowanie czcionki
-  if (!font.loadFromFile("resources/fonts/SourceSansPro-Regular.otf")) {
+  // Ładowanie czcionki z głównego katalogu projektu
+  // Kiedy uruchamiasz z build/Debug/, ścieżka "../.." cofa się do głównego folderu, możliwa potrzeba modyfikacji później przy zmianie miejsca pliku .exe
+  if (!font.loadFromFile("../../resources/fonts/SourceSansPro-Regular.otf")) {
     std::cout << "[ERROR] Nie udało się załadować czcionki!" << std::endl;
-    std::cout << "[INFO] Sprawdź czy plik istnieje w: resources/fonts/SourceSansPro-Regular.otf" << std::endl;
+    std::cout << "[INFO] Sprawdź czy plik istnieje w: ../../resources/fonts/SourceSansPro-Regular.otf" << std::endl;
+    std::cout << "[INFO] (relatywnie do build/Debug/)" << std::endl;
     return;
   }
   
-  std::cout << "Czcionka załadowana pomyślnie" << std::endl;
-  
+  std::cout << "Czcionka załadowana pomyślnie" << std::endl;  
+
   // Konfiguracja tytułu
   titleText.setFont(font);
   titleText.setCharacterSize(TITLE_SIZE);
