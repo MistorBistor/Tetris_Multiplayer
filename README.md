@@ -133,12 +133,12 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 
 ---
 
-- [ ] Implementacja wykrywania pełnych linii
-- [ ] Implementacja usuwania linii i opadania bloków
+- [x] Implementacja wykrywania pełnych linii
+- [x] Implementacja usuwania linii i opadania bloków
 - [ ] Implementacja systemu punktacji (100/300/500/800 pkt)
-- [ ] Implementacja poziomów trudności
+- [x] Implementacja poziomów trudności
 - [ ] Implementacja przyspieszania gry z poziomem
 - [ ] Implementacja wyświetlania wyniku (prawy panel)
-- [ ] Implementacja menu startowego
+- [x] Implementacja menu startowego
 - [ ] Implementacja tekstowego Game Over z wynikiem
 - [ ] Dodanie czcionki do `resources/`

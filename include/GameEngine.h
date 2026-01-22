@@ -7,6 +7,21 @@
 #include "TetrominoType.h"
 
 class GameEngine {
+private:
+    sf::RenderWindow window;
+    sf::Clock clock;
+
+    Menu mainMenu; // Menu główne gry
+
+    bool isRunning = false;
+
+    float fallTimer = 0.0f;
+    float fallSpeed = 0.5f; // Im mniejsza wartość, tym szybciej spada klocek
+
+    // Lock delay: klocek "czeka" chwilę po dotknięciu dna zanim się zablokuje
+    float lockTimer = 0.0f;
+    float lockDelay = 0.5f;
+    bool isLocking = false;
  private:
   sf::RenderWindow window;
   sf::Clock clock;
@@ -30,6 +45,8 @@ private:
 	 */
 	float fallSpeed = 0.5f;
 
+    enum class GameState { Menu, Playing, Paused, GameOver };
+    GameState gameState = GameState::Menu;
   enum class GameState {Menu, Playing, Paused, GameOver };
   GameState gameState = GameState::Menu;
 	enum class GameState { Playing, GameOver };
