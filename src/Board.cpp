@@ -75,7 +75,7 @@ bool Board::isLineFull(int row) const {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -88,7 +88,7 @@ void Board::removeLine(int row) {
       grid[currentRow][col] = grid[currentRow - 1][col];
     }
   }
-  
+
   // Górna linia (row 0) staje się pusta
   for (int col = 0; col < COLS; col++) {
     grid[0][col] = 0;
@@ -101,21 +101,21 @@ void Board::removeLine(int row) {
  */
 int Board::clearFullLines() {
   int clearedLines = 0;
-  
+
   // Sprawdzamy od dołu do góry (ROWS-1 do 0)
   int row = ROWS - 1;
   while (row >= 0) {
     if (isLineFull(row)) {
       removeLine(row);
       clearedLines++;
-      // Nie zmniejszamy row, bo po usunięciu linia powyżej "spadła" na to miejsce
-      // i musimy ją też sprawdzić
+      // Nie zmniejszamy row, bo po usunięciu linia powyżej "spadła" na to
+      // miejsce i musimy ją też sprawdzić
     } else {
       // Linia nie jest pełna, przechodzimy do następnej (wyżej)
       row--;
     }
   }
-  
+
   return clearedLines;
 }
 
@@ -123,12 +123,10 @@ int Board::clearFullLines() {
  * Resetuje planszę do stanu początkowego - wszystkie komórki puste.
  */
 void Board::reset() {
-  
   // Zerujemy całą siatkę
   for (int row = 0; row < ROWS; row++) {
     for (int col = 0; col < COLS; col++) {
       grid[row][col] = 0;
     }
   }
-  
 }
