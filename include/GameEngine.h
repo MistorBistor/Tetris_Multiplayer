@@ -17,7 +17,7 @@ class GameEngine {
    */
   float fallSpeed = 0.5f;
 
-  enum class GameState {Menu, Playing, Paused, GameOver };
+  enum class GameState { Menu, Playing, Paused, GameOver };
   GameState gameState = GameState::Menu;
 
   Board board;

@@ -9,7 +9,14 @@
  * @enum MenuState
  * @brief Stany menu
  */
-enum class MenuState { MAIN_MENU, GAME, PAUSE, GAME_OVER, SETTINGS, DIFFICULTY_SELECTION };
+enum class MenuState {
+  MAIN_MENU,
+  GAME,
+  PAUSE,
+  GAME_OVER,
+  SETTINGS,
+  DIFFICULTY_SELECTION
+};
 /**
  * @enum MenuAction
  * @brief Akcje zwracane przez menu po wyborze opcji
@@ -40,7 +47,7 @@ class Menu {
 
   sf::Font font;
   sf::Text titleText;
-  std::vector < sf::Text> itemTexts;
+  std::vector<sf::Text> itemTexts;
 
   int selectedDifficulty;
   int selectedDifficultyElement;
@@ -127,13 +134,13 @@ class Menu {
 
   // Zwiększa wybrany poziom trudności (z zawijaniem 5->1)
   void increaseDifficulty();
-  
+
   // Zmniejsza wybrany poziom trudności (z zawijaniem 1->5)
   void decreaseDifficulty();
-  
+
   // Zwraca wybrany poziom trudności (1-5)
   int getSelectedDifficulty() const { return selectedDifficulty; }
-  
+
   // Konwertuje poziom trudności na prędkość spadania
   float getDifficultySpeed() const;
 

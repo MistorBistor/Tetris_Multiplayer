@@ -7,14 +7,14 @@ GameEngine::GameEngine() : window(sf::VideoMode(500, 700), "Tetris") {}
 void GameEngine::initialize() {
   isRunning = true;
   gameState = GameState::Menu;  // Zmieniamy na Menu zamiast Playing
-  
+
   // Inicjalizacja generatora liczb losowych
   std::srand(static_cast<unsigned int>(std::time(nullptr)));
-  
+
   // Inicjalizacja menu
   menu.initialize();
   menu.setState(MenuState::MAIN_MENU);
-  
+
   std::cout << "Inicjalizacja gry - rozpoczęcie od menu" << '\n';
 }
 
@@ -39,19 +39,19 @@ void GameEngine::handleEvents() {
     if (event.type == sf::Event::Closed) {
       window.close();
     }
-    
+
     // Obsługa zdarzeń w zależności od stanu gry
     if (gameState == GameState::Menu) {
       menu.handleEvent(event);
-      
+
       // Dla ekranu wyboru trudności - sprawdzamy kliknięcia w przyciski
       if (menu.getState() == MenuState::DIFFICULTY_SELECTION) {
-        if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+        if (event.type == sf::Event::MouseButtonPressed &&
+            event.mouseButton.button == sf::Mouse::Left) {
           int clickResult = menu.checkDifficultyClick(
-            static_cast<float>(event.mouseButton.x),
-            static_cast<float>(event.mouseButton.y)
-          );
-          
+              static_cast<float>(event.mouseButton.x),
+              static_cast<float>(event.mouseButton.y));
+
           if (clickResult == 1) {  // Confirm
             std::cout << "Kliknięto Confirm" << std::endl;
             handleMenuSelection();
@@ -60,26 +60,30 @@ void GameEngine::handleEvents() {
             menu.setState(MenuState::MAIN_MENU);
           }
         }
-        
+
         // Enter również potwierdza
-        if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) {
+        if (event.type == sf::Event::KeyPressed &&
+            event.key.code == sf::Keyboard::Enter) {
           handleMenuSelection();
         }
-      } 
+      }
       // Dla innych ekranów menu
       else {
         // Sprawdzamy czy naciśnięto Enter lub kliknięto myszką
-        if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) {
+        if (event.type == sf::Event::KeyPressed &&
+            event.key.code == sf::Keyboard::Enter) {
           handleMenuSelection();
         }
-        
-        if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+
+        if (event.type == sf::Event::MouseButtonPressed &&
+            event.mouseButton.button == sf::Mouse::Left) {
           handleMenuSelection();
         }
       }
     } else if (gameState == GameState::Playing) {
       // Obsługa pauzy
-      if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
+      if (event.type == sf::Event::KeyPressed &&
+          event.key.code == sf::Keyboard::Escape) {
         std::cout << "Pauza" << std::endl;
         menu.setState(MenuState::PAUSE);
         gameState = GameState::Menu;
@@ -111,16 +115,16 @@ void GameEngine::update(float deltaTime) {
 
       spawnNewTetromino();
       // FIXME: Gra nie powinna się kończyć w tym miejscu
-      //gameState = GameState::GameOver;
+      // gameState = GameState::GameOver;
 
-      //std::cout << "GAME OVER - klocek dotknął dna" << '\n';
+      // std::cout << "GAME OVER - klocek dotknął dna" << '\n';
     }
   }
 }
 
 void GameEngine::render() {
   window.clear(sf::Color::White);
-  
+
   if (gameState == GameState::Menu) {
     // Renderujemy tylko menu
     menu.render(window);
@@ -133,7 +137,7 @@ void GameEngine::render() {
     board.render(window);
     menu.render(window);
   }
-  
+
   window.display();
 }
 
@@ -168,13 +172,13 @@ void GameEngine::lockTetromino() {
   board.lockTetromino(tetrominoX, tetrominoY, shape);
   std::cout << "Klocek został zablokowany na planszy, pozycja: (" << tetrominoX
             << ", " << tetrominoY << ")\n";
-  
+
   // Sprawdź i usuń pełne linie
   int linesCleared = board.clearFullLines();
   if (linesCleared > 0) {
     std::cout << "Wyczyszczono " << linesCleared << " linie!" << '\n';
   }
-  //Tworzy nowy klocek Tetromino
+  // Tworzy nowy klocek Tetromino
   spawnNewTetromino();
 }
 
@@ -192,56 +196,58 @@ void GameEngine::spawnNewTetromino() {
  */
 void GameEngine::handleMenuSelection() {
   MenuAction action = menu.handleSelection();
-  
-  std::cout << "GameEngine - obsługa akcji menu: " << static_cast<int>(action) << std::endl;
-  
+
+  std::cout << "GameEngine - obsługa akcji menu: " << static_cast<int>(action)
+            << std::endl;
+
   switch (action) {
     case MenuAction::START_GAME:
       std::cout << "Przechodzenie do wyboru trudności" << std::endl;
       menu.setState(MenuState::DIFFICULTY_SELECTION);
       break;
-      
+
     case MenuAction::CONFIRM_DIFFICULTY:
-      std::cout << "Rozpoczynanie gry z poziomem: " << menu.getSelectedDifficulty() << std::endl;
+      std::cout << "Rozpoczynanie gry z poziomem: "
+                << menu.getSelectedDifficulty() << std::endl;
       fallSpeed = menu.getDifficultySpeed();
       board.reset();  // Czyścimy planszę przed nową grą
       gameState = GameState::Playing;
       spawnNewTetromino();
       break;
-      
+
     case MenuAction::HIGH_SCORES:
       std::cout << "Wyświetlanie high scores (TODO)" << std::endl;
       break;
-      
+
     case MenuAction::SETTINGS:
       std::cout << "Otwieranie ustawień" << std::endl;
       menu.setState(MenuState::SETTINGS);
       break;
-      
+
     case MenuAction::EXIT:
       std::cout << "Zamykanie gry" << std::endl;
       window.close();
       break;
-      
+
     case MenuAction::RESUME:
       std::cout << "Wznawianie gry" << std::endl;
       gameState = GameState::Playing;
       break;
-      
+
     case MenuAction::RESTART:
       std::cout << "Restart gry - powrót do wyboru trudności" << std::endl;
       board.reset();  // Czyścimy planszę przed restartem
       menu.setState(MenuState::DIFFICULTY_SELECTION);
       gameState = GameState::Menu;
       break;
-      
+
     case MenuAction::MAIN_MENU:
       std::cout << "Powrót do menu głównego" << std::endl;
       board.reset();  // Czyścimy planszę przy powrocie do menu
       menu.setState(MenuState::MAIN_MENU);
       gameState = GameState::Menu;
       break;
-      
+
     default:
       break;
   }
@@ -254,5 +260,3 @@ void GameEngine::renderGameOver() {
   overlay.setFillColor(sf::Color(0, 0, 0, 150));
   window.draw(overlay);
 }
-
-
