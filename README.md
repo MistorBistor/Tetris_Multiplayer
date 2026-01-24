@@ -133,10 +133,35 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 
 - [x] Implementacja wykrywania pełnych linii
 - [x] Implementacja usuwania linii i opadania bloków
-- [ ] Implementacja systemu punktacji (100/300/500/800 pkt)
 - [x] Implementacja poziomów trudności
 - [x] Implementacja przyspieszania gry z poziomem
-- [ ] Implementacja wyświetlania wyniku (prawy panel)
 - [x] Implementacja menu startowego
-- [ ] Implementacja tekstowego Game Over z wynikiem
 - [x] Dodanie czcionki do `resources/`
+
+---
+
+- [ ] Naprawić zapełnianie się planszy
+- [x] Implementacja menu pauzy
+- [ ] Implementacja systemu punktacji (100/300/500/800 pkt)
+- [ ] Implementacja wyświetlania wyniku (prawy panel)
+- [ ] Implementacja tekstowego Game Over z wynikiem
+
+---
+
+- [ ] Implementacja Ghost Piece (podgląd gdzie klocek spadnie)
+- [ ] Implementacja Hold Piece (przytrzymanie klocka)
+- [ ] Implementacja wyświetlania kolejki następnych klocków (3-5 klocków)
+- [ ] Implementacja systemu combo (mnożnik punktów za sekwencje)
+- [ ] Implementacja animacji usuwania linii
+
+---
+
+- [ ] Implementacja lokalnej tablicy wyników (Top 10)
+- [ ] Implementacja statystyk gracza (czas gry, total linii, itp.)
+- [ ] Implementacja konfiguracji sterowania (remapping klawiszy; w pliku)
+
+---
+
+- [ ] Implementacja systemu dźwięków (SFX dla rotacji, drop, line clear)
+- [ ] Implementacja muzyki w tle
+- [ ] Implementacja 2-3 motywów kolorystycznych
