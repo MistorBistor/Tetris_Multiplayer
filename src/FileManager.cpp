@@ -14,14 +14,14 @@ FileManager::~FileManager() {
   // TODO: Cleanup jeśli potrzebne
 }
 
-bool FileManager::saveGame(const GameSave& save) const {
+bool FileManager::saveGame(const GameSave &save) const {
   // TODO: Otworzyć plik SAVE_FILE do zapisu
   // TODO: Zapisać wszystkie pola struktury GameSave
   // TODO: Zwrócić true jeśli sukces, false przy błędzie
   return false;
 }
 
-bool FileManager::loadGame(GameSave& save) const {
+bool FileManager::loadGame(GameSave &save) const {
   // TODO: Otworzyć plik SAVE_FILE do odczytu
   // TODO: Wczytać wszystkie pola do struktury GameSave
   // TODO: Zwrócić true jeśli sukces, false przy błędzie
@@ -54,14 +54,14 @@ int FileManager::loadHighScore() const {
 }
 
 void FileManager::saveSettings(
-    const std::vector<std::pair<std::string, std::string>>& settings) const {
+    const std::vector<std::pair<std::string, std::string>> &settings) const {
   // TODO: Otworzyć plik SETTINGS_FILE do zapisu
   // TODO: Zapisać każdą parę klucz-wartość
   // TODO: Format: klucz=wartość w każdej linii
 }
 
-std::vector<std::pair<std::string, std::string>> FileManager::loadSettings()
-    const {
+std::vector<std::pair<std::string, std::string>>
+FileManager::loadSettings() const {
   // TODO: Otworzyć plik SETTINGS_FILE do odczytu
   // TODO: Wczytać wszystkie pary klucz-wartość
   // TODO: Zwrócić wektor par

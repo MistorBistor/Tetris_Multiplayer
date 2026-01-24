@@ -1,26 +1,29 @@
 #include "GameEngine.h"
 
+#include <ctime>
 #include <iostream>
+#include <random>
 
 GameEngine::GameEngine() : window(sf::VideoMode(500, 700), "Tetris") {}
 
 void GameEngine::initialize() {
   isRunning = true;
-  gameState = GameState::Menu;  // Zmieniamy na Menu zamiast Playing
+  gameState = GameState::Menu;
 
-  // Inicjalizacja generatora liczb losowych
-  std::srand(static_cast<unsigned int>(std::time(nullptr)));
+  mainMenu.initialize();
+  mainMenu.setState(MenuState::MAIN_MENU);
 
-  // Inicjalizacja menu
-  menu.initialize();
-  menu.setState(MenuState::MAIN_MENU);
+  currentTetromino = Tetromino(TetrominoType::I);
 
-  std::cout << "Inicjalizacja gry - rozpoczęcie od menu" << '\n';
+  fallTimer = 0.0f;
+  lockTimer = 0.0f;
+  isLocking = false;
+
+  std::cout << "[GameEngine] Initialize -> Menu\n";
 }
 
 void GameEngine::run() {
   while (window.isOpen()) {
-    // Oblicz deltaTime, czyli czas, który upłynął od ostatniej klatki
     float deltaTime = clock.restart().asSeconds();
 
     handleEvents();
@@ -37,87 +40,105 @@ void GameEngine::handleEvents() {
   sf::Event event;
   while (window.pollEvent(event)) {
     if (event.type == sf::Event::Closed) {
+      std::cout << "[GameEngine] Window closed\n";
       window.close();
+      return;
     }
 
-    // Obsługa zdarzeń w zależności od stanu gry
     if (gameState == GameState::Menu) {
-      menu.handleEvent(event);
+      mainMenu.handleEvent(event);
 
-      // Dla ekranu wyboru trudności - sprawdzamy kliknięcia w przyciski
-      if (menu.getState() == MenuState::DIFFICULTY_SELECTION) {
+      if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
         if (event.type == sf::Event::MouseButtonPressed &&
             event.mouseButton.button == sf::Mouse::Left) {
-          int clickResult = menu.checkDifficultyClick(
+
+          int clickResult = mainMenu.checkDifficultyClick(
               static_cast<float>(event.mouseButton.x),
               static_cast<float>(event.mouseButton.y));
 
-          if (clickResult == 1) {  // Confirm
-            std::cout << "Kliknięto Confirm" << std::endl;
+          if (clickResult == 1) {
+            std::cout << "[Menu] Click -> Confirm\n";
             handleMenuSelection();
-          } else if (clickResult == 2) {  // Back
-            std::cout << "Kliknięto Back" << std::endl;
-            menu.setState(MenuState::MAIN_MENU);
+          } else if (clickResult == 2) {
+            std::cout << "[Menu] Click -> Back\n";
+            mainMenu.setState(MenuState::MAIN_MENU);
           }
         }
 
-        // Enter również potwierdza
         if (event.type == sf::Event::KeyPressed &&
             event.key.code == sf::Keyboard::Enter) {
+          std::cout << "[Menu] Enter -> Confirm\n";
           handleMenuSelection();
         }
-      }
-      // Dla innych ekranów menu
-      else {
-        // Sprawdzamy czy naciśnięto Enter lub kliknięto myszką
+      } else {
         if (event.type == sf::Event::KeyPressed &&
             event.key.code == sf::Keyboard::Enter) {
+          std::cout << "[Menu] Enter -> Select\n";
           handleMenuSelection();
         }
 
         if (event.type == sf::Event::MouseButtonPressed &&
             event.mouseButton.button == sf::Mouse::Left) {
+          std::cout << "[Menu] Mouse click -> Select\n";
           handleMenuSelection();
         }
       }
-    } else if (gameState == GameState::Playing) {
-      // Obsługa pauzy
-      if (event.type == sf::Event::KeyPressed &&
-          event.key.code == sf::Keyboard::Escape) {
-        std::cout << "Pauza" << std::endl;
-        menu.setState(MenuState::PAUSE);
-        gameState = GameState::Menu;
+
+      continue;
+    }
+
+    if (gameState == GameState::Playing) {
+      if (event.type == sf::Event::KeyPressed) {
+        if (event.key.code == sf::Keyboard::Escape) {
+          std::cout << "[GameEngine] Pause -> Menu\n";
+          mainMenu.setState(MenuState::PAUSE);
+          gameState = GameState::Menu;
+        } else {
+          handleKeyPress(event.key.code);
+        }
       }
     }
   }
 }
 
-/**
- * Aktualizuje stan gry na podstawie upływu czasu.
- * Dodajemy do fallTimer czas, który upłynął od ostatniej klatki (deltaTime).
- * Gdy fallTimer przekroczy wartość fallSpeed (domyślnie 1 sekunda),
- * resetujemy fallTimer i przesuwamy aktualny klocek Tetromino o jedną
- * jednostkę w dół.
- */
 void GameEngine::update(float deltaTime) {
   fallTimer += deltaTime;
+
   if (fallTimer >= fallSpeed) {
     fallTimer = 0.0f;
 
-    std::cout << "Klocek spada: y" << " = " << currentTetromino.getY() << '\n';
+    std::cout << "[GameEngine] Falling, y=" << currentTetromino.getY() << "\n";
     currentTetromino.moveDown();
 
     if (checkCollision()) {
-      // Klocek spadł za nisko, cofamy ruch
       currentTetromino.moveUp();
 
+      if (!isLocking) {
+        std::cout << "[GameEngine] Start lock delay\n";
+        isLocking = true;
+        lockTimer = 0.0f;
+      }
+    } else {
+      if (isLocking) {
+        std::cout << "[GameEngine] Cancel lock delay\n";
+        isLocking = false;
+        lockTimer = 0.0f;
+      }
+    }
+  }
+
+  if (isLocking) {
+    lockTimer += deltaTime;
+
+    if (lockTimer >= lockDelay) {
+      std::cout << "[GameEngine] Lock piece\n";
+
       lockTetromino();
-
       spawnNewTetromino();
-      // FIXME: Gra nie powinna się kończyć w tym miejscu
-      // gameState = GameState::GameOver;
 
-      // std::cout << "GAME OVER - klocek dotknął dna" << '\n';
+      isLocking = false;
+      lockTimer = 0.0f;
+      fallTimer = 0.0f;
     }
   }
 }
@@ -126,25 +147,23 @@ void GameEngine::render() {
   window.clear(sf::Color::White);
 
   if (gameState == GameState::Menu) {
-    // Renderujemy tylko menu
-    menu.render(window);
+    mainMenu.render(window);
   } else if (gameState == GameState::Playing) {
-    // Renderujemy grę
     board.render(window);
     currentTetromino.render(window);
   } else if (gameState == GameState::GameOver) {
-    // Renderujemy planszę i menu Game Over
     board.render(window);
-    menu.render(window);
+    renderGameOver();
+    mainMenu.render(window);
   }
 
   window.display();
 }
 
-void GameEngine::shutdown() { std::cout << "Koniec gry" << '\n'; }
+void GameEngine::shutdown() { std::cout << "[GameEngine] Shutdown\n"; }
 
 bool GameEngine::checkCollision() {
-  const auto& shape = currentTetromino.getShape();
+  const auto &shape = currentTetromino.getShape();
   int tetrominoX = currentTetromino.getX();
   int tetrominoY = currentTetromino.getY();
 
@@ -165,98 +184,215 @@ bool GameEngine::checkCollision() {
 }
 
 void GameEngine::lockTetromino() {
-  const auto& shape = currentTetromino.getShape();
+  const auto &shape = currentTetromino.getShape();
   int tetrominoX = currentTetromino.getX();
   int tetrominoY = currentTetromino.getY();
 
-  board.lockTetromino(tetrominoX, tetrominoY, shape);
-  std::cout << "Klocek został zablokowany na planszy, pozycja: (" << tetrominoX
-            << ", " << tetrominoY << ")\n";
+  board.lockTetromino(tetrominoX, tetrominoY, shape,
+                      currentTetromino.getType());
+  std::cout << "[GameEngine] Locked at (" << tetrominoX << ", " << tetrominoY
+            << ")\n";
 
-  // Sprawdź i usuń pełne linie
   int linesCleared = board.clearFullLines();
   if (linesCleared > 0) {
-    std::cout << "Wyczyszczono " << linesCleared << " linie!" << '\n';
+    std::cout << "[GameEngine] Cleared lines: " << linesCleared << "\n";
   }
-  // Tworzy nowy klocek Tetromino
-  spawnNewTetromino();
 }
 
-/**
- * Tworzy nowy klocek Tetromino.
- * Na razie zawsze tworzymy klocek I w pozycji startowej (3, 0).
- */
 void GameEngine::spawnNewTetromino() {
-  currentTetromino = Tetromino();
-  std::cout << "Nowy klocek utworzony na pozycji (3, 0)" << '\n';
+  std::cout << "[GameEngine] Spawn new tetromino\n";
+
+  static std::mt19937 generator(static_cast<unsigned int>(std::time(nullptr)));
+  std::uniform_int_distribution<int> distribution(0, 6);
+
+  int randomType = distribution(generator);
+  std::cout << "[GameEngine] Random type=" << randomType << "\n";
+
+  isLocking = false;
+  lockTimer = 0.0f;
+
+  currentTetromino = Tetromino(static_cast<TetrominoType>(randomType));
+
+  if (checkCollision()) {
+    std::cout << "[GameEngine] GAME OVER - no space for new piece\n";
+    gameState = GameState::GameOver;
+  }
 }
 
-/**
- * Obsługuje wybór opcji w menu.
- */
 void GameEngine::handleMenuSelection() {
-  MenuAction action = menu.handleSelection();
-
-  std::cout << "GameEngine - obsługa akcji menu: " << static_cast<int>(action)
-            << std::endl;
+  MenuAction action = mainMenu.handleSelection();
+  std::cout << "[GameEngine] Menu action=" << static_cast<int>(action) << "\n";
 
   switch (action) {
-    case MenuAction::START_GAME:
-      std::cout << "Przechodzenie do wyboru trudności" << std::endl;
-      menu.setState(MenuState::DIFFICULTY_SELECTION);
-      break;
+  case MenuAction::START_GAME:
+    std::cout << "[Menu] -> Difficulty selection\n";
+    mainMenu.setState(MenuState::DIFFICULTY_SELECTION);
+    break;
 
-    case MenuAction::CONFIRM_DIFFICULTY:
-      std::cout << "Rozpoczynanie gry z poziomem: "
-                << menu.getSelectedDifficulty() << std::endl;
-      fallSpeed = menu.getDifficultySpeed();
-      board.reset();  // Czyścimy planszę przed nową grą
-      gameState = GameState::Playing;
-      spawnNewTetromino();
-      break;
+  case MenuAction::CONFIRM_DIFFICULTY:
+    std::cout << "[Menu] Start game\n";
+    fallSpeed = mainMenu.getDifficultySpeed();
+    board.reset();
+    gameState = GameState::Playing;
+    spawnNewTetromino();
+    break;
 
-    case MenuAction::HIGH_SCORES:
-      std::cout << "Wyświetlanie high scores (TODO)" << std::endl;
-      break;
+  case MenuAction::RESUME:
+    std::cout << "[Menu] Resume\n";
+    gameState = GameState::Playing;
+    break;
 
-    case MenuAction::SETTINGS:
-      std::cout << "Otwieranie ustawień" << std::endl;
-      menu.setState(MenuState::SETTINGS);
-      break;
+  case MenuAction::RESTART:
+    std::cout << "[Menu] Restart\n";
+    board.reset();
+    mainMenu.setState(MenuState::DIFFICULTY_SELECTION);
+    gameState = GameState::Menu;
+    break;
 
-    case MenuAction::EXIT:
-      std::cout << "Zamykanie gry" << std::endl;
-      window.close();
-      break;
+  case MenuAction::MAIN_MENU:
+    std::cout << "[Menu] Main menu\n";
+    board.reset();
+    mainMenu.setState(MenuState::MAIN_MENU);
+    gameState = GameState::Menu;
+    break;
 
-    case MenuAction::RESUME:
-      std::cout << "Wznawianie gry" << std::endl;
-      gameState = GameState::Playing;
-      break;
+  case MenuAction::EXIT:
+    std::cout << "[Menu] Exit\n";
+    window.close();
+    break;
 
-    case MenuAction::RESTART:
-      std::cout << "Restart gry - powrót do wyboru trudności" << std::endl;
-      board.reset();  // Czyścimy planszę przed restartem
-      menu.setState(MenuState::DIFFICULTY_SELECTION);
-      gameState = GameState::Menu;
-      break;
-
-    case MenuAction::MAIN_MENU:
-      std::cout << "Powrót do menu głównego" << std::endl;
-      board.reset();  // Czyścimy planszę przy powrocie do menu
-      menu.setState(MenuState::MAIN_MENU);
-      gameState = GameState::Menu;
-      break;
-
-    default:
-      break;
+  default:
+    break;
   }
 }
 
 void GameEngine::renderGameOver() {
-  // Półprzezroczyste czarne tło na całym oknie
   sf::RectangleShape overlay(sf::Vector2f(500, 700));
   overlay.setPosition(0, 0);
   overlay.setFillColor(sf::Color(0, 0, 0, 150));
   window.draw(overlay);
+}
+
+void GameEngine::handleKeyPress(sf::Keyboard::Key key) {
+  if (key == sf::Keyboard::Left) {
+    std::cout << "[Input] LEFT\n";
+    currentTetromino.moveLeft();
+    if (checkCollision()) {
+      std::cout << "[Input] Collision -> undo LEFT\n";
+      currentTetromino.moveRight();
+    } else if (isLocking) {
+      lockTimer = 0.0f;
+    }
+  } else if (key == sf::Keyboard::Right) {
+    std::cout << "[Input] RIGHT\n";
+    currentTetromino.moveRight();
+    if (checkCollision()) {
+      std::cout << "[Input] Collision -> undo RIGHT\n";
+      currentTetromino.moveLeft();
+    } else if (isLocking) {
+      lockTimer = 0.0f;
+    }
+  } else if (key == sf::Keyboard::Down) {
+    std::cout << "[Input] DOWN\n";
+    currentTetromino.moveDown();
+    if (checkCollision()) {
+      currentTetromino.moveUp();
+      if (!isLocking) {
+        isLocking = true;
+        lockTimer = 0.0f;
+      }
+    }
+  } else if (key == sf::Keyboard::Space) {
+    std::cout << "[Input] SPACE (hard drop)\n";
+    while (!checkCollision()) {
+      currentTetromino.moveDown();
+    }
+    currentTetromino.moveUp();
+    lockTetromino();
+    spawnNewTetromino();
+  } else if (key == sf::Keyboard::Up) {
+    std::cout << "[Input] Gracz naciska: GÓRA (rotacja + wall kick)\n";
+
+    // Zapamiętujemy starą pozycję, żeby zawsze móc wrócić
+    const int startX = currentTetromino.getX();
+    const int startY = currentTetromino.getY();
+
+    // Obracamy klocek (na chwilę) i sprawdzamy czy da się go "ustawić" kickami
+    currentTetromino.rotate();
+
+    // Lista prostych kicków (kolejność ma znaczenie!).
+    // Najpierw próbujemy bez przesunięcia, potem o 1/2 w lewo/prawo,
+    // potem lekko do góry (bo często obrót przy podłodze wymaga podbicia).
+    const std::vector<std::pair<int, int>> kickTests = {
+        {0, 0},  {-1, 0},  {1, 0},  {-2, 0}, {2, 0},
+        {0, -1}, {-1, -1}, {1, -1}, {0, -2}};
+
+    auto moveBy = [&](int dx, int dy) {
+      // Uwaga: używamy Twoich metod moveLeft/moveRight/moveUp/moveDown
+      // i robimy to pętlami, żeby nie zmieniać klasy Tetromino.
+      if (dx > 0) {
+        for (int i = 0; i < dx; i++)
+          currentTetromino.moveRight();
+      } else if (dx < 0) {
+        for (int i = 0; i < -dx; i++)
+          currentTetromino.moveLeft();
+      }
+
+      if (dy > 0) {
+        for (int i = 0; i < dy; i++)
+          currentTetromino.moveDown();
+      } else if (dy < 0) {
+        for (int i = 0; i < -dy; i++)
+          currentTetromino.moveUp();
+      }
+    };
+
+    auto resetToStartPos = [&]() {
+      const int currentX = currentTetromino.getX();
+      const int currentY = currentTetromino.getY();
+      moveBy(startX - currentX, startY - currentY);
+    };
+
+    bool rotationPlaced = false;
+
+    for (size_t i = 0; i < kickTests.size(); i++) {
+      // Zawsze zaczynamy próbę od pozycji startowej
+      resetToStartPos();
+
+      const int kickX = kickTests[i].first;
+      const int kickY = kickTests[i].second;
+
+      // Próbujemy przesunięcie
+      moveBy(kickX, kickY);
+
+      // Jeśli NIE ma kolizji — obrót się udał
+      if (!checkCollision()) {
+        std::cout << "[WallKick] Rotacja OK, test=" << i << " kick=(" << kickX
+                  << "," << kickY << ")\n";
+        rotationPlaced = true;
+
+        // Udany ruch powinien resetować lock delay (żeby dało się jeszcze
+        // manewrować)
+        if (isLocking) {
+          lockTimer = 0.0f;
+          std::cout << "[WallKick] Reset lockTimer po udanej rotacji\n";
+        }
+        break;
+      } else {
+        std::cout << "[WallKick] Test nieudany, test=" << i << " kick=("
+                  << kickX << "," << kickY << ")\n";
+      }
+    }
+
+    if (!rotationPlaced) {
+      // Nic nie pasuje — wracamy do pozycji i cofamy obrót (3x rotate = -90
+      // stopni)
+      std::cout << "[WallKick] Rotacja zablokowana - cofanie\n";
+      resetToStartPos();
+
+      currentTetromino.rotate();
+      currentTetromino.rotate();
+      currentTetromino.rotate();
+    }
+  }
 }

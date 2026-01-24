@@ -4,40 +4,52 @@
 #include "Board.h"
 #include "Menu.h"
 #include "Tetromino.h"
+#include "TetrominoType.h"
 
 class GameEngine {
- private:
+private:
   sf::RenderWindow window;
   sf::Clock clock;
-  Menu menu;
-  bool isRunning = false;
-  float fallTimer = 0.0f;
-  /**
-   * Zakres wartości od 0.1 do 1.0 określa jak szybko klocek spada.
-   */
-  float fallSpeed = 0.5f;
 
+  Menu mainMenu; // Menu główne gry
   enum class GameState { Menu, Playing, Paused, GameOver };
   GameState gameState = GameState::Menu;
 
-  Board board;
-  Tetromino currentTetromino;
+  bool isRunning = false;
 
- public:
+  // Spadanie klocka
+  float fallTimer = 0.0f;
+  float fallSpeed = 0.5f; // Im mniejsza wartość, tym szybciej spada klocek
+
+  // Lock delay: klocek "czeka" chwilę po dotknięciu dna zanim się zablokuje
+  float lockTimer = 0.0f;
+  float lockDelay = 0.5f;
+  bool isLocking = false;
+
+  Board board;
+
+  // Uwaga: brak konstruktora domyślnego Tetromino, więc inicjalizujemy typem
+  Tetromino currentTetromino = Tetromino(TetrominoType::I);
+
+public:
   GameEngine();
   void initialize();
   void run();
   void shutdown();
 
- private:
+private:
   void handleEvents();
   void update(float deltaTime);
   void render();
+
+  void handleKeyPress(sf::Keyboard::Key key);
 
   // Metody pomocnicze
   bool checkCollision();
   void lockTetromino();
   void spawnNewTetromino();
+
+  // Menu / UI
   void handleMenuSelection();
   void renderGameOver();
 };

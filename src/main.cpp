@@ -11,7 +11,7 @@ int main() {
     engine.shutdown();
 
     return 0;
-  } catch (const std::exception& e) {
+  } catch (const std::exception &e) {
     std::cerr << "Wystąpił błąd: " << e.what() << '\n';
 
     return 1;

@@ -3,10 +3,8 @@
 #include <iostream>
 
 Menu::Menu()
-    : currentState(MenuState::MAIN_MENU),
-      selectedIndex(0),
-      selectedDifficulty(0),
-      selectedDifficultyElement(2) {
+    : currentState(MenuState::MAIN_MENU), selectedIndex(0),
+      selectedDifficulty(0), selectedDifficultyElement(2) {
   std::cout << "Menu - konstruktor" << std::endl;
 }
 
@@ -89,35 +87,35 @@ void Menu::setState(MenuState state) {
 
   // Konfiguracja tytułu i opcji w zależności od stanu
   switch (currentState) {
-    case MenuState::MAIN_MENU:
-      titleText.setString("TETRIS");  // Nazwa do dyskusji
-      menuItems = {"Play", "High Scores", "Settings", "Quit"};
-      break;
+  case MenuState::MAIN_MENU:
+    titleText.setString("TETRIS"); // Nazwa do dyskusji
+    menuItems = {"Play", "High Scores", "Settings", "Quit"};
+    break;
 
-    case MenuState::PAUSE:
-      titleText.setString("PAUSED");
-      menuItems = {"Resume", "Restart", "Main Menu"};
-      break;
+  case MenuState::PAUSE:
+    titleText.setString("PAUSED");
+    menuItems = {"Resume", "Restart", "Main Menu"};
+    break;
 
-    case MenuState::GAME_OVER:
-      titleText.setString("GAME OVER");
-      menuItems = {"Restart", "Main Menu", "Quit"};
-      break;
+  case MenuState::GAME_OVER:
+    titleText.setString("GAME OVER");
+    menuItems = {"Restart", "Main Menu", "Quit"};
+    break;
 
-    case MenuState::SETTINGS:
-      titleText.setString("SETTINGS");
-      menuItems = {"Back"};
-      break;
+  case MenuState::SETTINGS:
+    titleText.setString("SETTINGS");
+    menuItems = {"Back"};
+    break;
 
-    case MenuState::DIFFICULTY_SELECTION:
-      titleText.setString("SELECT DIFFICULTY");
-      selectedDifficultyElement = 2;  // Startujemy na Confirm
-      // Nie używamy standardowych menuItems dla tego ekranu
-      updateDifficultyDisplay();
-      break;
+  case MenuState::DIFFICULTY_SELECTION:
+    titleText.setString("SELECT DIFFICULTY");
+    selectedDifficultyElement = 2; // Startujemy na Confirm
+    // Nie używamy standardowych menuItems dla tego ekranu
+    updateDifficultyDisplay();
+    break;
 
-    default:
-      break;
+  default:
+    break;
   }
 
   // Wycentrowanie tytułu
@@ -191,7 +189,7 @@ void Menu::updateDifficultyDisplay() {
 void Menu::increaseDifficulty() {
   selectedDifficulty++;
   if (selectedDifficulty > MAX_DIFFICULTY) {
-    selectedDifficulty = MIN_DIFFICULTY;  // Zawijanie 9 -> 0
+    selectedDifficulty = MIN_DIFFICULTY; // Zawijanie 9 -> 0
   }
   updateDifficultyDisplay();
   std::cout << "Zwiększono trudność do: " << selectedDifficulty << std::endl;
@@ -203,7 +201,7 @@ void Menu::increaseDifficulty() {
 void Menu::decreaseDifficulty() {
   selectedDifficulty--;
   if (selectedDifficulty < MIN_DIFFICULTY) {
-    selectedDifficulty = MAX_DIFFICULTY;  // Zawijanie 0 -> 9
+    selectedDifficulty = MAX_DIFFICULTY; // Zawijanie 0 -> 9
   }
   updateDifficultyDisplay();
   std::cout << "Zmniejszono trudność do: " << selectedDifficulty << std::endl;
@@ -222,16 +220,16 @@ void Menu::decreaseDifficulty() {
 float Menu::getDifficultySpeed() const {
   // Tablica klatek dla każdego poziomu (0-9) z NES Tetris
   const int framesPerDrop[] = {
-      48,  // Level 0
-      43,  // Level 1
-      38,  // Level 2
-      33,  // Level 3
-      28,  // Level 4
-      23,  // Level 5
-      18,  // Level 6
-      13,  // Level 7
-      8,   // Level 8
-      6    // Level 9
+      48, // Level 0
+      43, // Level 1
+      38, // Level 2
+      33, // Level 3
+      28, // Level 4
+      23, // Level 5
+      18, // Level 6
+      13, // Level 7
+      8,  // Level 8
+      6   // Level 9
   };
 
   if (selectedDifficulty >= 0 && selectedDifficulty <= 9) {
@@ -239,7 +237,7 @@ float Menu::getDifficultySpeed() const {
     return framesPerDrop[selectedDifficulty] / 60.0f;
   }
 
-  return 0.8f;  // Domyślna wartość (Level 0)
+  return 0.8f; // Domyślna wartość (Level 0)
 }
 
 /**
@@ -272,11 +270,11 @@ void Menu::moveDown() {
 MenuAction Menu::handleSelection() {
   // Dla ekranu wyboru trudności sprawdzamy który element jest wybrany
   if (currentState == MenuState::DIFFICULTY_SELECTION) {
-    if (selectedDifficultyElement == 2) {  // Confirm
+    if (selectedDifficultyElement == 2) { // Confirm
       std::cout << "Menu - potwierdzono poziom trudności: "
                 << selectedDifficulty << std::endl;
       return MenuAction::CONFIRM_DIFFICULTY;
-    } else if (selectedDifficultyElement == 1) {  // Back
+    } else if (selectedDifficultyElement == 1) { // Back
       std::cout << "Menu - powrót do menu głównego z wyboru trudności"
                 << std::endl;
       return MenuAction::MAIN_MENU;
@@ -298,47 +296,48 @@ MenuAction Menu::handleSelection() {
 
   // Mapowanie opcji na akcje w zależności od stanu menu
   switch (currentState) {
-    case MenuState::MAIN_MENU:
-      switch (selectedIndex) {
-        case 0:
-          return MenuAction::START_GAME;
-        case 1:
-          return MenuAction::HIGH_SCORES;
-        case 2:
-          return MenuAction::SETTINGS;
-        case 3:
-          return MenuAction::EXIT;
-      }
-      break;
+  case MenuState::MAIN_MENU:
+    switch (selectedIndex) {
+    case 0:
+      return MenuAction::START_GAME;
+    case 1:
+      return MenuAction::HIGH_SCORES;
+    case 2:
+      return MenuAction::SETTINGS;
+    case 3:
+      return MenuAction::EXIT;
+    }
+    break;
 
-    case MenuState::PAUSE:
-      switch (selectedIndex) {
-        case 0:
-          return MenuAction::RESUME;
-        case 1:
-          return MenuAction::RESTART;
-        case 2:
-          return MenuAction::MAIN_MENU;
-      }
-      break;
+  case MenuState::PAUSE:
+    switch (selectedIndex) {
+    case 0:
+      return MenuAction::RESUME;
+    case 1:
+      return MenuAction::RESTART;
+    case 2:
+      return MenuAction::MAIN_MENU;
+    }
+    break;
 
-    case MenuState::GAME_OVER:
-      switch (selectedIndex) {
-        case 0:
-          return MenuAction::RESTART;
-        case 1:
-          return MenuAction::MAIN_MENU;
-        case 2:
-          return MenuAction::EXIT;
-      }
-      break;
+  case MenuState::GAME_OVER:
+    switch (selectedIndex) {
+    case 0:
+      return MenuAction::RESTART;
+    case 1:
+      return MenuAction::MAIN_MENU;
+    case 2:
+      return MenuAction::EXIT;
+    }
+    break;
 
-    case MenuState::SETTINGS:
-      if (selectedIndex == 0) return MenuAction::MAIN_MENU;
-      break;
+  case MenuState::SETTINGS:
+    if (selectedIndex == 0)
+      return MenuAction::MAIN_MENU;
+    break;
 
-    default:
-      break;
+  default:
+    break;
   }
 
   return MenuAction::NONE;
@@ -347,7 +346,7 @@ MenuAction Menu::handleSelection() {
 /**
  * Obsługuje zdarzenia klawiatury i myszy.
  */
-void Menu::handleEvent(const sf::Event& event) {
+void Menu::handleEvent(const sf::Event &event) {
   // Specjalna obsługa dla ekranu wyboru trudności
   if (currentState == MenuState::DIFFICULTY_SELECTION) {
     if (event.type == sf::Event::KeyPressed) {
@@ -372,7 +371,7 @@ void Menu::handleEvent(const sf::Event& event) {
         if (event.key.code == sf::Keyboard::Left ||
             event.key.code == sf::Keyboard::Right) {
           // Lewo/Prawo: przełącz między Back a Confirm
-          selectedDifficultyElement = 2;  // Przejdź do Confirm
+          selectedDifficultyElement = 2; // Przejdź do Confirm
           std::cout << "[DEBUG] Przełączono na Confirm" << std::endl;
         } else if (event.key.code == sf::Keyboard::Up) {
           // Góra: przejdź do selektora poziomu
@@ -384,7 +383,7 @@ void Menu::handleEvent(const sf::Event& event) {
         if (event.key.code == sf::Keyboard::Left ||
             event.key.code == sf::Keyboard::Right) {
           // Lewo/Prawo: przełącz między Confirm a Back
-          selectedDifficultyElement = 1;  // Przejdź do Back
+          selectedDifficultyElement = 1; // Przejdź do Back
           std::cout << "[DEBUG] Przełączono na Back" << std::endl;
         } else if (event.key.code == sf::Keyboard::Up) {
           // Góra: przejdź do selektora poziomu
@@ -403,12 +402,12 @@ void Menu::handleEvent(const sf::Event& event) {
         // Kliknięcie w lewą strzałkę - zmniejsz poziom
         if (leftArrowText.getGlobalBounds().contains(mousePos)) {
           decreaseDifficulty();
-          selectedDifficultyElement = 0;  // Zaznacz selektor
+          selectedDifficultyElement = 0; // Zaznacz selektor
         }
         // Kliknięcie w prawą strzałkę - zwiększ poziom
         else if (rightArrowText.getGlobalBounds().contains(mousePos)) {
           increaseDifficulty();
-          selectedDifficultyElement = 0;  // Zaznacz selektor
+          selectedDifficultyElement = 0; // Zaznacz selektor
         }
         // Kliknięcie w tekst "Level: X" - zaznacz selektor
         else if (difficultyText.getGlobalBounds().contains(mousePos)) {
@@ -435,7 +434,7 @@ void Menu::handleEvent(const sf::Event& event) {
       }
     }
 
-    return;  // Nie obsługujemy standardowej nawigacji dla tego ekranu
+    return; // Nie obsługujemy standardowej nawigacji dla tego ekranu
   }
 
   // Standardowa obsługa dla innych ekranów menu
@@ -492,22 +491,22 @@ int Menu::checkDifficultyClick(float mouseX, float mouseY) const {
   // UWAGA: Zamieniliśmy miejsca - Confirm jest teraz po prawej
   if (confirmButton.getGlobalBounds().contains(mousePos)) {
     std::cout << "[DEBUG] Kliknięto w Confirm!" << std::endl;
-    return 1;  // Confirm
+    return 1; // Confirm
   }
 
   if (backButton.getGlobalBounds().contains(mousePos)) {
     std::cout << "[DEBUG] Kliknięto w Back!" << std::endl;
-    return 2;  // Back
+    return 2; // Back
   }
 
   std::cout << "[DEBUG] Nie kliknięto w żaden przycisk" << std::endl;
-  return 0;  // Nic nie kliknięto
+  return 0; // Nic nie kliknięto
 }
 
 /**
  * Renderuje menu na ekranie.
  */
-void Menu::render(sf::RenderWindow& window) const {
+void Menu::render(sf::RenderWindow &window) const {
   // Rysujemy półprzezroczyste tło
   sf::RectangleShape background(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
   background.setFillColor(sf::Color(0, 0, 0, 200));
@@ -549,13 +548,13 @@ void Menu::render(sf::RenderWindow& window) const {
       sf::FloatRect rb = rightCopy.getLocalBounds();
       rightCopy.setOrigin(rb.width / 2.0f, rb.height / 2.0f);
       rightCopy.setPosition(rightArrowText.getPosition());
-    } else if (selectedDifficultyElement == 1) {  // Back
+    } else if (selectedDifficultyElement == 1) { // Back
       backCopy.setFillColor(sf::Color::Yellow);
       backCopy.setCharacterSize(35);
       sf::FloatRect bounds = backCopy.getLocalBounds();
       backCopy.setOrigin(bounds.width / 2.0f, bounds.height / 2.0f);
       backCopy.setPosition(backButton.getPosition());
-    } else if (selectedDifficultyElement == 2) {  // Confirm
+    } else if (selectedDifficultyElement == 2) { // Confirm
       confirmCopy.setFillColor(sf::Color::Yellow);
       confirmCopy.setCharacterSize(35);
       sf::FloatRect bounds = confirmCopy.getLocalBounds();

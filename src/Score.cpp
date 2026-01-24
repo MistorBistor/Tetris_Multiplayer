@@ -52,7 +52,7 @@ void Score::loadHighScore() {
   // TODO: Jeśli plik nie istnieje, ustawić highScore na 0
 }
 
-void Score::render(sf::RenderWindow& window) const {
+void Score::render(sf::RenderWindow &window) const {
   // TODO: Utworzyć obiekty sf::Text dla:
   //       - Score: currentScore
   //       - Level: level
