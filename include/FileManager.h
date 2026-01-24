@@ -25,12 +25,12 @@ struct GameSave {
  * najwyższych wyników i ustawień.
  */
 class FileManager {
- private:
+private:
   static const std::string SAVE_FILE;
   static const std::string HIGHSCORE_FILE;
   static const std::string SETTINGS_FILE;
 
- public:
+public:
   /**
    * @brief Konstruktor
    */
@@ -47,7 +47,7 @@ class FileManager {
    * @return true jeśli zapis się powiódł
    * TODO: Serializować dane gry do pliku (format tekstowy lub binarny)
    */
-  bool saveGame(const GameSave& save) const;
+  bool saveGame(const GameSave &save) const;
 
   /**
    * @brief Wczytanie stanu gry z pliku
@@ -55,7 +55,7 @@ class FileManager {
    * @return true jeśli wczytanie się powiodło
    * TODO: Deserializować dane z pliku
    */
-  bool loadGame(GameSave& save) const;
+  bool loadGame(GameSave &save) const;
 
   /**
    * @brief Sprawdzenie czy istnieje zapis gry
@@ -90,7 +90,7 @@ class FileManager {
    * TODO: Zapisać ustawienia do pliku (np. głośność, sterowanie)
    */
   void saveSettings(
-      const std::vector<std::pair<std::string, std::string>>& settings) const;
+      const std::vector<std::pair<std::string, std::string>> &settings) const;
 
   /**
    * @brief Wczytanie ustawień gry
@@ -100,4 +100,4 @@ class FileManager {
   std::vector<std::pair<std::string, std::string>> loadSettings() const;
 };
 
-#endif  // FILE_MANAGER_HPP
+#endif // FILE_MANAGER_HPP

@@ -9,7 +9,14 @@
  * @enum MenuState
  * @brief Stany menu
  */
-enum class MenuState { MAIN_MENU, GAME, PAUSE, GAME_OVER, SETTINGS, DIFFICULTY_SELECTION };
+enum class MenuState {
+  MAIN_MENU,
+  GAME,
+  PAUSE,
+  GAME_OVER,
+  SETTINGS,
+  DIFFICULTY_SELECTION
+};
 /**
  * @enum MenuAction
  * @brief Akcje zwracane przez menu po wyborze opcji
@@ -33,14 +40,14 @@ enum class MenuAction {
  * Klasa zarządzająca menu głównym, menu pauzy i ekranem końca gry.
  */
 class Menu {
- private:
+private:
   MenuState currentState;
   std::vector<std::string> menuItems;
   int selectedIndex;
 
   sf::Font font;
   sf::Text titleText;
-  std::vector < sf::Text> itemTexts;
+  std::vector<sf::Text> itemTexts;
 
   int selectedDifficulty;
   int selectedDifficultyElement;
@@ -65,7 +72,7 @@ class Menu {
   // TODO: Dodać czcionki, teksty i obiekty graficzne SFML
   // TODO: Dodać tło menu
 
- public:
+public:
   /**
    * @brief Konstruktor
    */
@@ -123,17 +130,17 @@ class Menu {
    * @param event Zdarzenie SFML
    * TODO: Obsłużyć klawisze strzałek i Enter
    */
-  void handleEvent(const sf::Event& event);
+  void handleEvent(const sf::Event &event);
 
   // Zwiększa wybrany poziom trudności (z zawijaniem 5->1)
   void increaseDifficulty();
-  
+
   // Zmniejsza wybrany poziom trudności (z zawijaniem 1->5)
   void decreaseDifficulty();
-  
+
   // Zwraca wybrany poziom trudności (1-5)
   int getSelectedDifficulty() const { return selectedDifficulty; }
-  
+
   // Konwertuje poziom trudności na prędkość spadania
   float getDifficultySpeed() const;
 
@@ -146,7 +153,7 @@ class Menu {
    * @param window Okno do rysowania
    * TODO: Narysować tło, tytuł i opcje menu z podświetleniem wybranej opcji
    */
-  void render(sf::RenderWindow& window) const;
+  void render(sf::RenderWindow &window) const;
 
   /**
    * @brief Wyświetlenie ekranu Game Over z wynikiem
@@ -157,4 +164,4 @@ class Menu {
   void showGameOver(int score, bool isHighScore);
 };
 
-#endif  // MENU_HPP
+#endif // MENU_HPP

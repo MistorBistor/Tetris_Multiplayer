@@ -11,7 +11,7 @@
  * poziomu trudności i statystyk gracza.
  */
 class Score {
- private:
+private:
   int currentScore;
   int level;
   int linesCleared;
@@ -21,7 +21,7 @@ class Score {
   // TODO: Dodać tablicę punktów dla różnych akcji (1 linia, 2 linie, 3 linie,
   // Tetris)
 
- public:
+public:
   /**
    * @brief Konstruktor
    */
@@ -106,7 +106,7 @@ class Score {
    * @param window Okno do rysowania
    * TODO: Wyświetlić aktualny wynik, poziom, linie i najwyższy wynik
    */
-  void render(sf::RenderWindow& window) const;
+  void render(sf::RenderWindow &window) const;
 };
 
-#endif  // SCORE_HPP
+#endif // SCORE_HPP
