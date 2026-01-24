@@ -122,14 +122,12 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 
 ---
 
-- [ ] Implementacja wszystkich 7 kształtów klocków (I, O, T, S, Z, J, L)
-- [ ] Implementacja systemu kolorów dla każdego klocka
-- [ ] Implementacja losowania typu klocka
-- [ ] Implementacja sterowania (lewo, prawo, w dół, hard drop)
-- [ ] Implementacja rotacji klocków (algorytm SRS)
-- [ ] Implementacja wall kick przy rotacji
-- [ ] Rozszerzenie `Board::grid` o przechowywanie typów klocków
-- [ ] Rozszerzenie `Board::render()` o kolorowe renderowanie
+- [x] Implementacja wszystkich 7 kształtów klocków (I, O, T, S, Z, J, L)
+- [x] Implementacja systemu kolorów dla każdego klocka
+- [x] Implementacja losowania typu klocka
+- [x] Implementacja sterowania (lewo, prawo, w dół, hard drop, soft drop)
+- [x] Implementacja rotacji klocków (algorytm SRS)
+- [x] Implementacja wall kick przy rotacji
 
 ---
 
@@ -137,8 +135,8 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 - [x] Implementacja usuwania linii i opadania bloków
 - [ ] Implementacja systemu punktacji (100/300/500/800 pkt)
 - [x] Implementacja poziomów trudności
-- [ ] Implementacja przyspieszania gry z poziomem
+- [x] Implementacja przyspieszania gry z poziomem
 - [ ] Implementacja wyświetlania wyniku (prawy panel)
 - [x] Implementacja menu startowego
 - [ ] Implementacja tekstowego Game Over z wynikiem
-- [ ] Dodanie czcionki do `resources/`
+- [x] Dodanie czcionki do `resources/`
