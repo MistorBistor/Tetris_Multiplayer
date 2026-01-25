@@ -15,6 +15,15 @@ private:
   // Siatka: 0 = puste, 1 = zajęte
   std::vector<std::vector<TetrominoType>> grid;
 
+  bool isClearing = false;
+  float clearTimer = 0.0f;
+  int blinkCount = 0;
+  std::vector<int> clearingRows;
+
+  float blinkInterval = 0.10f;   // co ile sekund zmiana (0.08–0.12 wygląda dobrze)
+  int maxBlinks = 6;             // 6 zmian = ok. 3 „mrugnięcia”
+  bool blinkOn = false;
+
 public:
   Board(); // konstruktor
   void render(sf::RenderWindow &window);
@@ -28,6 +37,12 @@ public:
   bool isLineFull(int row) const;
   void removeLine(int row);
   int clearFullLines();
+
+  bool startClearAnimation ();                // wykrywa pełne linie i uruchamia animację
+  int updateClearAnimation (float dt);        // zwraca >0 dopiero gdy zakończy i usunie linie
+  bool isLineClearAnimating () const;         // getter
+  void updateClearAnimSpeed (int level);
+
 
   void reset();
 };

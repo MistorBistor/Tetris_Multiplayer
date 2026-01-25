@@ -20,7 +20,7 @@ void Menu::initialize() {
   // Kiedy uruchamiasz z build/Debug/, ścieżka "../.." cofa się do głównego
   // folderu, możliwa potrzeba modyfikacji później przy zmianie miejsca pliku
   // .exe
-  if (!font.loadFromFile("../resources/fonts/SourceSansPro-Regular.otf")) {
+  if (!font.loadFromFile ("../../resources/fonts/SourceSansPro-Regular.otf")) {
     std::cout << "[ERROR] Nie udało się załadować czcionki!" << std::endl;
     std::cout << "[INFO] Sprawdź czy plik istnieje w: "
                  "../resources/fonts/SourceSansPro-Regular.otf"

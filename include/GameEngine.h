@@ -5,31 +5,58 @@
 #include "Menu.h"
 #include "Tetromino.h"
 #include "TetrominoType.h"
+#include <SFML/Audio.hpp>
 
 class GameEngine {
 private:
-  sf::RenderWindow window;
-  sf::Clock clock;
+	sf::RenderWindow window;
+	sf::Clock clock;
 
-  Menu mainMenu; // Menu główne gry
-  enum class GameState { Menu, Playing, Paused, GameOver };
-  GameState gameState = GameState::Menu;
+	Menu mainMenu; // Menu główne gry
 
-  bool isRunning = false;
+	enum class GameState { Menu, Playing, Paused, GameOver };
+	GameState gameState = GameState::Menu;
 
-  // Spadanie klocka
-  float fallTimer = 0.0f;
-  float fallSpeed = 0.5f; // Im mniejsza wartość, tym szybciej spada klocek
+	bool isRunning = false;
 
-  // Lock delay: klocek "czeka" chwilę po dotknięciu dna zanim się zablokuje
-  float lockTimer = 0.0f;
-  float lockDelay = 0.5f;
-  bool isLocking = false;
+	// Spadanie klocka
+	float fallTimer = 0.0f;
+	float fallSpeed = 0.5f; // Im mniejsza wartość, tym szybciej spada klocek
 
-  Board board;
+	// Lock delay: klocek "czeka" chwilę po dotknięciu dna zanim się zablokuje
+	float lockTimer = 0.0f;
+	float lockDelay = 0.5f;
+	bool isLocking = false;
 
-  // Uwaga: brak konstruktora domyślnego Tetromino, więc inicjalizujemy typem
-  Tetromino currentTetromino = Tetromino(TetrominoType::I);
+	// Anti infinite spin / lock delay move limit
+	int lockMoveCounter = 0;
+	const int maxLockMoves = 10;
+
+	// czy ten klocek już kiedykolwiek dotknął podłoża (dna/innego klocka)
+	bool hasTouchedGround = false;
+
+	// helper
+	bool isPieceGrounded ();
+
+	Board board;
+
+	sf::Music backgroundMusic;
+
+	// Uwaga: brak konstruktora domyślnego Tetromino, więc inicjalizujemy typem
+	Tetromino currentTetromino = Tetromino (TetrominoType::I);
+
+	int lastTetrominoType = -1;
+
+	int startLevel = 0;        // level wybrany w menu (0–9)
+	int currentLevel = 0;      // aktualny level w grze
+	int totalLinesCleared = 0; // ile linii wyczyszczono od startu
+
+	float getFallSpeedForLevel (int level) const;
+	void updateLevelAndSpeed (int linesJustCleared);
+
+	void updateMusicSpeed ();
+
+	
 
 public:
   GameEngine();
@@ -48,6 +75,7 @@ private:
   bool checkCollision();
   void lockTetromino();
   void spawnNewTetromino();
+  void loadAudio ();
 
   // Menu / UI
   void handleMenuSelection();

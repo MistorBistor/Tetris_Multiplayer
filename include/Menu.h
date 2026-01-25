@@ -72,6 +72,8 @@ private:
   // TODO: Dodać czcionki, teksty i obiekty graficzne SFML
   // TODO: Dodać tło menu
 
+ 
+
 public:
   /**
    * @brief Konstruktor
@@ -162,6 +164,8 @@ public:
    * TODO: Wyświetlić informacje o końcu gry i statystyki
    */
   void showGameOver(int score, bool isHighScore);
+
+  const sf::Font& getFont () const { return font; }
 };
 
 #endif // MENU_HPP

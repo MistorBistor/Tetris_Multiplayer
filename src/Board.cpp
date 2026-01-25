@@ -1,5 +1,6 @@
 #include "Board.h"
 #include <iostream>
+#include <algorithm>
 
 /**
  * Zwraca kolor na podstawie typu klocka.
@@ -32,28 +33,54 @@ Board::Board() : offsetX(100), offsetY(50) {
   grid.resize(ROWS, std::vector<TetrominoType>(COLS, TetrominoType::Empty));
 }
 
-void Board::render(sf::RenderWindow &window) {
-  // Rysujemy siatkę
-  sf::RectangleShape cell(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
+void Board::render (sf::RenderWindow& window) {
+    sf::RectangleShape cell (sf::Vector2f (CELL_SIZE - 1, CELL_SIZE - 1));
 
-  for (int row = 0; row < ROWS; row++) {
-    for (int col = 0; col < COLS; col++) {
-      cell.setPosition(offsetX + col * CELL_SIZE, offsetY + row * CELL_SIZE);
+    for (int row = 0; row < ROWS; row++) {
 
-      if (grid[row][col] == TetrominoType::Empty) {
-        // Pusta komórka
-        cell.setFillColor(sf::Color::White);
-        cell.setOutlineThickness(1);
-        cell.setOutlineColor(sf::Color::Black);
-      } else {
-        // Zablokowany klocek - użyj koloru na podstawie typu
-        cell.setFillColor(getColorForType(grid[row][col]));
-        cell.setOutlineThickness(0);
-      }
+        // 🔥 Czy ten wiersz jest aktualnie czyszczony?
+        bool rowClearing =
+            isClearing &&
+            (std::find (clearingRows.begin (), clearingRows.end (), row) != clearingRows.end ());
 
-      window.draw(cell);
+        for (int col = 0; col < COLS; col++) {
+            cell.setPosition (
+                offsetX + col * CELL_SIZE,
+                offsetY + row * CELL_SIZE
+            );
+
+            // ANIMACJA CZYSZCZENIA LINII
+            if (rowClearing) {
+                if (blinkOn) {
+                    // "rozbłysk" – jasny kolor
+                    cell.setFillColor (sf::Color::Black);   // możesz zmienić na White
+                    cell.setOutlineThickness (0);
+                }
+                else {
+                    // "zgaśnięcie" – wygląda jak pusta
+                    cell.setFillColor (sf::Color::White);
+                    cell.setOutlineThickness (1);
+                    cell.setOutlineColor (sf::Color::Black);
+                }
+
+                window.draw (cell);
+                continue;   // ❗ NIE rysujemy normalnej logiki
+            }
+
+            // NORMALNE RYSOWANIE (jak było wcześniej)
+            if (grid[row][col] == TetrominoType::Empty) {
+                cell.setFillColor (sf::Color::White);
+                cell.setOutlineThickness (1);
+                cell.setOutlineColor (sf::Color::Black);
+            }
+            else {
+                cell.setFillColor (getColorForType (grid[row][col]));
+                cell.setOutlineThickness (0);
+            }
+
+            window.draw (cell);
+        }
     }
-  }
 }
 
 /**
@@ -180,6 +207,81 @@ int Board::clearFullLines() {
   return clearedLines;
 }
 
+bool Board::startClearAnimation () {
+    if (isClearing) return true;
+
+    clearingRows.clear ();
+
+    // Szukamy pełnych linii OD DOŁU (ważne!)
+    for (int y = ROWS - 1; y >= 0; y--) {
+        bool full = true;
+
+        for (int x = 0; x < COLS; x++) {
+            if (grid[y][x] == TetrominoType::Empty) {
+                full = false;
+                break;
+            }
+        }
+
+        if (full) {
+            clearingRows.push_back (y);
+        }
+    }
+
+    if (clearingRows.empty ()) {
+        return false;
+    }
+
+    isClearing = true;
+    clearTimer = 0.0f;
+    blinkCount = 0;
+    blinkOn = true;
+
+    std::cout << "[Board] Start clear animation, rows:";
+    for (int r : clearingRows) std::cout << " " << r;
+    std::cout << "\n";
+
+    return true;
+}
+
+
+int Board::updateClearAnimation (float dt) {
+    if (!isClearing) return 0;
+
+    // Mruganie
+    clearTimer += dt;
+    if (clearTimer >= blinkInterval) {
+        clearTimer = 0.0f;
+        blinkOn = !blinkOn;
+        blinkCount++;
+    }
+
+    // Koniec animacji -> usuwamy linie
+    if (blinkCount >= maxBlinks) {
+        // Usuwamy od góry do dołu (rosnąco), żeby removeLine nie rozjechał indeksów
+        std::sort (clearingRows.begin (), clearingRows.end ());
+
+        int removed = (int)clearingRows.size ();
+
+        for (int row : clearingRows) {
+            removeLine (row);
+        }
+
+        isClearing = false;
+        clearingRows.clear ();
+        blinkOn = false;
+
+        return removed;
+    }
+
+    return 0;
+}
+
+bool Board::isLineClearAnimating () const {
+    return isClearing;
+}
+
+
 /**
  * Resetuje planszę do stanu początkowego - wszystkie komórki puste.
  */
@@ -193,3 +295,25 @@ void Board::reset() {
 
   std::cout << "[Board] Reset planszy - wszystkie komórki ustawione na Empty\n";
 }
+
+void Board::updateClearAnimSpeed (int level) {
+    // bazowy interwał (na niskim levelu)
+    const float baseInterval = 0.10f;
+
+    // jak szybko przyspieszamy z levelem
+    const float intervalPerLevel = 0.004f;
+
+    // minimalny interwał (żeby nie było epilepsji i nie zniknęło "instant")
+    const float minInterval = 0.04f;
+
+    float interval = baseInterval - level * intervalPerLevel;
+    if (interval < minInterval) interval = minInterval;
+
+    blinkInterval = interval;
+
+    // maxBlinks zostawiamy stałe (np. 6), żeby nadal było 2-3 mrugnięcia
+    // jeśli chcesz, możesz też delikatnie skracać liczbę blinków:
+    // maxBlinks = std::max(4, 6 - level / 5);
+}
+
+
