@@ -83,3 +83,6 @@ endif()
 
 # Optional: Install target (if you want to install the executable)
 install(TARGETS tetris DESTINATION bin)
+
+file(COPY ${CMAKE_SOURCE_DIR}/resources
+     DESTINATION ${CMAKE_BINARY_DIR})
