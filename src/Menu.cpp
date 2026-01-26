@@ -20,7 +20,7 @@ void Menu::initialize() {
   // Kiedy uruchamiasz z build/Debug/, ścieżka "../.." cofa się do głównego
   // folderu, możliwa potrzeba modyfikacji później przy zmianie miejsca pliku
   // .exe
-  if (!font.loadFromFile("../resources/fonts/SourceSansPro-Regular.otf")) {
+  if (!font.loadFromFile("../../resources/fonts/SourceSansPro-Regular.otf")) {
     std::cout << "[ERROR] Nie udało się załadować czcionki!" << std::endl;
     std::cout << "[INFO] Sprawdź czy plik istnieje w: "
                  "../resources/fonts/SourceSansPro-Regular.otf"
@@ -508,7 +508,7 @@ int Menu::checkDifficultyClick(float mouseX, float mouseY) const {
  */
 void Menu::render(sf::RenderWindow &window) const {
   // Rysujemy półprzezroczyste tło
-  sf::RectangleShape background(sf::Vector2f(WINDOW_WIDTH, WINDOW_HEIGHT));
+  sf::RectangleShape background(sf::Vector2f(720, 700));
   background.setFillColor(sf::Color(0, 0, 0, 200));
   window.draw(background);
 

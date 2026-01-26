@@ -1,8 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
-
 #include "Board.h"
 #include "Menu.h"
+#include "Score.h"
 #include "Tetromino.h"
 #include "TetrominoType.h"
 
@@ -10,46 +10,60 @@ class GameEngine {
 private:
   sf::RenderWindow window;
   sf::Clock clock;
-
-  Menu mainMenu; // Menu główne gry
+  Menu mainMenu;
+  Score score;
+  
   enum class GameState { Menu, Playing, Paused, GameOver };
   GameState gameState = GameState::Menu;
-
   bool isRunning = false;
-
-  // Spadanie klocka
+  
   float fallTimer = 0.0f;
-  float fallSpeed = 0.5f; // Im mniejsza wartość, tym szybciej spada klocek
-
-  // Lock delay: klocek "czeka" chwilę po dotknięciu dna zanim się zablokuje
+  float fallSpeed = 0.5f;
   float lockTimer = 0.0f;
   float lockDelay = 0.5f;
   bool isLocking = false;
-
+  
   Board board;
-
-  // Uwaga: brak konstruktora domyślnego Tetromino, więc inicjalizujemy typem
   Tetromino currentTetromino = Tetromino(TetrominoType::I);
 
+  std::vector<TetrominoType> nextQueue;
+  TetrominoType heldTetrominoType;
+  bool hasHeldPiece;
+  bool canHold;  // Czy mo�na u�y� hold w tej turze (raz na klocek)
+  
+  sf::Font uiFont;
+  
 public:
   GameEngine();
   void initialize();
   void run();
   void shutdown();
 
-private:
+  private:
   void handleEvents();
   void update(float deltaTime);
   void render();
 
   void handleKeyPress(sf::Keyboard::Key key);
-
-  // Metody pomocnicze
+  
   bool checkCollision();
   void lockTetromino();
   void spawnNewTetromino();
-
-  // Menu / UI
+  
   void handleMenuSelection();
   void renderGameOver();
+
+  //Metody pomocnicze next/hold
+  TetrominoType getRandomTetrominoType();
+  void holdCurrentPiece();
+  void renderNextPiece(sf::RenderWindow& window) const;
+  void renderHeldPiece(sf::RenderWindow& window) const;
+  void renderTetrominoPreview(sf::RenderWindow& window, TetrominoType type, float x, float y) const;
+  
+  //Obs�uga kontrolera Xbox Series X
+  void handleControllerButton(unsigned int button);
+  void handleControllerAxis(sf::Joystick::Axis axis, float position);
+  void handleControllerButtonMenu(unsigned int button);
+  void handleControllerAxisMenu(sf::Joystick::Axis axis, float position);
+
 };

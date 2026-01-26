@@ -27,8 +27,7 @@ sf::Color getColorForType(TetrominoType type) {
 }
 
 // Offset oznacza pozycję planszy (Board) w oknie, czyli margines boczny
-Board::Board() : offsetX(100), offsetY(50) {
-  // Inicjalizacja pustej siatki, zgodnie z definicją w Board.h
+Board::Board() : offsetX(270), offsetY(50) {
   grid.resize(ROWS, std::vector<TetrominoType>(COLS, TetrominoType::Empty));
 }
 
