@@ -112,3 +112,27 @@ void Tetromino::rotate() {
   // Zastąp stary kształt nowym
   shape = rotatedShape;
 }
+
+void Tetromino::renderGhost (sf::RenderWindow& window) {
+    // (nie zmieniamy logiki kształtu, tylko kolor)
+
+    sf::RectangleShape block (sf::Vector2f (CELL_SIZE - 1, CELL_SIZE - 1));
+
+    // półprzezroczysty (alpha np. 80)
+    sf::Color ghostColor = color;
+    ghostColor.a = 60;
+
+    block.setFillColor (ghostColor);
+    block.setOutlineThickness (0);
+
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            if (shape[row][col] == 1) {
+                block.setPosition (offsetX + (x + col) * CELL_SIZE,
+                    offsetY + (y + row) * CELL_SIZE);
+
+                window.draw (block);
+            }
+        }
+    }
+}

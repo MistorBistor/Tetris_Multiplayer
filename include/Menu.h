@@ -4,6 +4,8 @@
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <vector>
+#include <SFML/Audio.hpp>
+
 
 /**
  * @enum MenuState

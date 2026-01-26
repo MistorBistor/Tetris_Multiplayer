@@ -167,6 +167,7 @@ void GameEngine::update (float deltaTime) {
                 hasTouchedGround = true;
                 lockMoveCounter = 0;
                 std::cout << "[LockDelay] First touch -> start counting moves\n";
+                
             }
 
             if (!isLocking) {
@@ -177,6 +178,9 @@ void GameEngine::update (float deltaTime) {
                 // UWAGA: NIE resetujemy lockMoveCounter tutaj,
                 // bo wall kick/rotacje potrafią chwilowo odrywać klocek od ziemi
                 // i wtedy licznik by się "odnawiał".
+
+                if (sfxLanded.getStatus () != sf::Sound::Playing)
+                    sfxLanded.play ();
             }
         }
         else {
@@ -211,8 +215,11 @@ void GameEngine::update (float deltaTime) {
 
             lockTetromino ();
 
-            // ✅ Nie spawnujemy od razu jeśli są linie do animacji
-            if (!board.startClearAnimation ()) {
+            //  Nie spawnujemy od razu jeśli są linie do animacji
+            if (board.startClearAnimation ()) {
+                sfxLineClear.play ();
+            }
+            else {
                 spawnNewTetromino ();
             }
 
@@ -227,7 +234,10 @@ void GameEngine::update (float deltaTime) {
             lockTetromino ();
 
             //  Nie spawnujemy od razu jeśli są linie do animacji
-            if (!board.startClearAnimation ()) {
+            if (board.startClearAnimation ()) {
+                sfxLineClear.play ();
+            }
+            else {
                 spawnNewTetromino ();
             }
 
@@ -248,6 +258,7 @@ void GameEngine::render () {
         // Podczas animacji czyszczenia linii NIE rysujemy aktywnego klocka,
         // bo został już zapisany do grid w lockTetromino()
         if (!board.isLineClearAnimating ()) {
+            renderGhostTetromino ();
             currentTetromino.render (window);
         }
     }
@@ -319,6 +330,7 @@ void GameEngine::spawnNewTetromino () {
         std::cout << "[GameEngine] GAME OVER - no space for new piece\n";
 
         backgroundMusic.stop ();
+        sfxGameOver.play ();
         gameState = GameState::GameOver;
         
     }
@@ -327,7 +339,7 @@ void GameEngine::spawnNewTetromino () {
 void GameEngine::loadAudio () {
     std::cout << "[Audio] CWD = " << std::filesystem::current_path ().string () << "\n";
 
-    const std::string path = "../../resources/audio/Original_Tetris_theme.ogg";
+    const std::string path = "../resources/audio/Original_Tetris_theme.ogg";
 
     std::cout << "[Audio] Exists? " << std::filesystem::exists (path) << " path=" << path << "\n";
 
@@ -340,11 +352,36 @@ void GameEngine::loadAudio () {
     backgroundMusic.setVolume (50.f);
     std::cout << "[Audio] Muzyka załadowana, duration="
         << backgroundMusic.getDuration ().asSeconds () << "s\n";
+
+    auto loadSfx = [&](sf::SoundBuffer& buf, sf::Sound& snd, const std::string& p) {
+        std::cout << "[Audio] SFX load: " << p
+            << " exists=" << std::filesystem::exists (p) << "\n";
+
+        if (!buf.loadFromFile (p)) {
+            std::cout << "[ERROR] Nie udało się załadować SFX: " << p << "\n";
+            return false;
+        }
+        snd.setBuffer (buf);
+        snd.setVolume (sfxVolume);
+        return true;
+        };
+
+    // Ścieżki do SFX (dopasowane do Twoich nazw)
+    loadSfx (sfxMenuBuf, sfxMenu, "../resources/audio/Tetris_menu_sound.ogg");
+    loadSfx (sfxMoveBuf, sfxMove, "../resources/audio/Tetris_move_piece.ogg");
+    loadSfx (sfxRotateBuf, sfxRotate, "../resources/audio/Tetris_rotate_piece.ogg");
+    loadSfx (sfxLandedBuf, sfxLanded, "../resources/audio/Tetris_piece_landed.ogg");
+    loadSfx (sfxLineClearBuf, sfxLineClear, "../resources/audio/Tetris_line_clear.ogg");
+    loadSfx (sfxGameOverBuf, sfxGameOver, "../resources/audio/Tetris_game_over.ogg");
 }
 
 void GameEngine::handleMenuSelection () {
     MenuAction action = mainMenu.handleSelection ();
     std::cout << "[GameEngine] Menu action=" << static_cast<int>(action) << "\n";
+
+    if (action != MenuAction::NONE) {
+        sfxMenu.play ();
+    }
 
     switch (action) {
     case MenuAction::START_GAME:
@@ -446,6 +483,48 @@ void GameEngine::renderGameOver () {
     window.draw (infoText);
 }
 
+void GameEngine::renderGhostTetromino () {
+    // Kopia aktualnego klocka (żeby nie ruszać prawdziwego)
+    Tetromino ghost = currentTetromino;
+
+    // Zrzucamy go w dół aż do kolizji
+    while (true) {
+        ghost.moveDown ();
+
+        // Sprawdzamy kolizję dla ghosta (robimy lokalny check)
+        const auto& shape = ghost.getShape ();
+        int gx = ghost.getX ();
+        int gy = ghost.getY ();
+
+        bool coll = false;
+        for (int row = 0; row < 4 && !coll; row++) {
+            for (int col = 0; col < 4; col++) {
+                if (shape[row][col] == 1) {
+                    int boardX = gx + col;
+                    int boardY = gy + row;
+                    if (!board.isValidPosition (boardX, boardY)) {
+                        coll = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (coll) {
+            ghost.moveUp (); // cofamy o 1 (ostatni legalny)
+            break;
+        }
+    }
+
+    // Jeśli ghost jest dokładnie tam gdzie klocek – nie ma sensu go rysować
+    if (ghost.getY () == currentTetromino.getY ()) {
+        return;
+    }
+
+    // Rysujemy ghosta
+    ghost.renderGhost (window); // <- to dodamy w kroku 3
+}
+
 void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
 
     // Mały helper: zwiększamy licznik ruchów, ale tylko gdy klocek
@@ -474,9 +553,11 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
             currentTetromino.moveRight ();
         }
         else {
-            // 🔒 Anti infinite spin – ruch liczymy po "pierwszym kontakcie z ziemią"
+            // Anti infinite spin – ruch liczymy po "pierwszym kontakcie z ziemią"
             countLockMoveIfNeeded ();
             resetLockTimerIfGrounded ();
+            if (sfxMove.getStatus () != sf::Sound::Playing)
+                sfxMove.play ();
         }
     }
     else if (key == sf::Keyboard::Right) {
@@ -488,9 +569,11 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
             currentTetromino.moveLeft ();
         }
         else {
-            // 🔒 Anti infinite spin – ruch liczymy po "pierwszym kontakcie z ziemią"
+            // Anti infinite spin – ruch liczymy po "pierwszym kontakcie z ziemią"
             countLockMoveIfNeeded ();
             resetLockTimerIfGrounded ();
+            if (sfxMove.getStatus () != sf::Sound::Playing)
+                sfxMove.play ();
         }
     }
     else if (key == sf::Keyboard::Down) {
@@ -509,6 +592,8 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
                 // Nie resetujemy lockMoveCounter tutaj, bo zależy Ci, żeby wall kick
                 // nie dawał darmowego “odnowienia”.
             }
+            if (sfxLanded.getStatus () != sf::Sound::Playing)
+                sfxLanded.play ();
         }
     }
     else if (key == sf::Keyboard::Space) {
@@ -518,9 +603,14 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
         }
         currentTetromino.moveUp ();
         lockTetromino ();
+        if (sfxLanded.getStatus () != sf::Sound::Playing)
+            sfxLanded.play ();
 
         //  Nie spawnujemy od razu jeśli są linie do animacji
-        if (!board.startClearAnimation ()) {
+        if (board.startClearAnimation ()) {
+            sfxLineClear.play ();
+        }
+        else {
             spawnNewTetromino ();
         }
     }
@@ -577,12 +667,15 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
 
                 rotationPlaced = true;
 
+                
+                    sfxRotate.play ();
+
                 // Sprawdzamy czy po udanej rotacji klocek nadal "stoi" na podłożu.
                 // To jest klucz do tego, żeby wall kick (podbijanie do góry)
                 // NIE resetował/nie rozwalał licznika lockMoveCounter.
                 const bool groundedAfter = isPieceGrounded ();
 
-                // 🔒 Anti infinite spin – liczymy rotacje po pierwszym dotknięciu ziemi
+                // Anti infinite spin – liczymy rotacje po pierwszym dotknięciu ziemi
                 // (nawet jeśli kick na moment podbije w górę).
                 countLockMoveIfNeeded ();
 

@@ -42,6 +42,23 @@ private:
 
 	sf::Music backgroundMusic;
 
+	// --- SFX (krótkie dźwięki) ---
+	sf::SoundBuffer sfxMenuBuf;
+	sf::SoundBuffer sfxMoveBuf;
+	sf::SoundBuffer sfxRotateBuf;
+	sf::SoundBuffer sfxLandedBuf;
+	sf::SoundBuffer sfxLineClearBuf;
+	sf::SoundBuffer sfxGameOverBuf;
+
+	sf::Sound sfxMenu;
+	sf::Sound sfxMove;
+	sf::Sound sfxRotate;
+	sf::Sound sfxLanded;
+	sf::Sound sfxLineClear;
+	sf::Sound sfxGameOver;
+
+	float sfxVolume = 50.f; // 0–100
+
 	// Uwaga: brak konstruktora domyślnego Tetromino, więc inicjalizujemy typem
 	Tetromino currentTetromino = Tetromino (TetrominoType::I);
 
@@ -55,6 +72,8 @@ private:
 	void updateLevelAndSpeed (int linesJustCleared);
 
 	void updateMusicSpeed ();
+
+	void renderGhostTetromino ();
 
 	
 
