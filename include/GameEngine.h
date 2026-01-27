@@ -79,8 +79,9 @@ private:
   bool checkCollision();
   void lockTetromino();
   void spawnNewTetromino();
-  void loadAudio();
-  
+  void loadAudio ();
+
+  // Menu / UI
   void handleMenuSelection();
   void renderGameOver();
   
