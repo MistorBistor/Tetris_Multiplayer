@@ -15,7 +15,7 @@ void Score::initialize() {
   std::cout << "[Score] Inicjalizacja\n";
   
   // Ładowanie czcionki
-  if (!font.loadFromFile("../../resources/fonts/SourceSansPro-Regular.otf")) {
+  if (!font.loadFromFile("../resources/fonts/SourceSansPro-Regular.otf")) {
     std::cout << "[Score ERROR] Nie udało się załadować czcionki!\n";
     return;
   }
@@ -137,10 +137,19 @@ void Score::loadHighScore() {
  * Renderuje wszystkie panele: Score (góra), Level (dół), Combo (nad siatką).
  */
 void Score::render(sf::RenderWindow& window) const {
-  // PANEL SCORE - prawa strona (po siatce)
-  // Siatka: x=270, szerokość=10*30=300, koniec na 570
-  sf::RectangleShape scorePanel(sf::Vector2f(150, 100));
-  scorePanel.setPosition(590, 50);  // ZMIENIONE z 420
+  const float leftMargin = 60.0f;
+  const float rightEdge = 800.0f;  // ZMIENIONE z 720 na 800
+  const float panelWidth = 150.0f;
+  const float rightMargin = 60.0f;
+  
+  // Siatka: x=270, szerokość=300, koniec na x=570
+  // Panele zaczynają się od x=590 (20px od siatki)
+  
+  // PANEL SCORE - prawa strona z marginesem
+  float scoreX = 590;  // 20px od końca siatki
+  
+  sf::RectangleShape scorePanel(sf::Vector2f(panelWidth, 100));
+  scorePanel.setPosition(scoreX, 50);
   scorePanel.setFillColor(sf::Color(50, 50, 50));
   scorePanel.setOutlineThickness(2);
   scorePanel.setOutlineColor(sf::Color::White);
@@ -151,7 +160,7 @@ void Score::render(sf::RenderWindow& window) const {
   scoreTitle.setString("SCORE");
   scoreTitle.setCharacterSize(20);
   scoreTitle.setFillColor(sf::Color::Yellow);
-  scoreTitle.setPosition(610, 60);  // ZMIENIONE
+  scoreTitle.setPosition(scoreX + 20, 60);
   window.draw(scoreTitle);
   
   sf::Text scoreValue;
@@ -159,12 +168,13 @@ void Score::render(sf::RenderWindow& window) const {
   scoreValue.setString(std::to_string(currentScore));
   scoreValue.setCharacterSize(24);
   scoreValue.setFillColor(sf::Color::White);
-  scoreValue.setPosition(610, 95);
+  scoreValue.setPosition(scoreX + 20, 95);
   window.draw(scoreValue);
   
-  // PANEL LEVEL
-  sf::RectangleShape levelPanel(sf::Vector2f(150, 80));
-  levelPanel.setPosition(590, 620);
+  // PANEL LEVEL - na dole, wyrównany z dołem siatki
+  // Siatka kończy się na y=650 (y=50 + 20*30)
+  sf::RectangleShape levelPanel(sf::Vector2f(panelWidth, 80));
+  levelPanel.setPosition(scoreX, 570);  // 650 - 80 = 570
   levelPanel.setFillColor(sf::Color(50, 50, 50));
   levelPanel.setOutlineThickness(2);
   levelPanel.setOutlineColor(sf::Color::White);
@@ -175,7 +185,7 @@ void Score::render(sf::RenderWindow& window) const {
   levelTitle.setString("LEVEL");
   levelTitle.setCharacterSize(20);
   levelTitle.setFillColor(sf::Color::Cyan);
-  levelTitle.setPosition(610, 630);
+  levelTitle.setPosition(scoreX + 20, 580);
   window.draw(levelTitle);
   
   sf::Text levelValue;
@@ -183,13 +193,13 @@ void Score::render(sf::RenderWindow& window) const {
   levelValue.setString(std::to_string(level));
   levelValue.setCharacterSize(24);
   levelValue.setFillColor(sf::Color::White);
-  levelValue.setPosition(610, 660);  // ZMIENIONE
+  levelValue.setPosition(scoreX + 20, 610);
   window.draw(levelValue);
   
   // PANEL COMBO - nad siatką (wyśrodkowany)
   if (comboCount > 0) {
     sf::RectangleShape comboPanel(sf::Vector2f(300, 35));
-    comboPanel.setPosition(270, 10);  // ZMIENIONE z 100
+    comboPanel.setPosition(270, 10);
     comboPanel.setFillColor(sf::Color(100, 0, 100, 200));
     comboPanel.setOutlineThickness(2);
     comboPanel.setOutlineColor(sf::Color::Yellow);
@@ -200,7 +210,7 @@ void Score::render(sf::RenderWindow& window) const {
     comboText.setString("COMBO x" + std::to_string(comboCount) + "!");
     comboText.setCharacterSize(22);
     comboText.setFillColor(sf::Color::Yellow);
-    comboText.setPosition(290, 15);  // ZMIENIONE
+    comboText.setPosition(290, 15);
     window.draw(comboText);
   }
 }
