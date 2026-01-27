@@ -364,36 +364,49 @@ void GameEngine::shutdown() {
     std::cout << "[GameEngine] Shutdown\n"; 
 }
 
-bool GameEngine::checkCollision() {
-  const auto &shape = currentTetromino.getShape();
-  int tetrominoX = currentTetromino.getX();
-  int tetrominoY = currentTetromino.getY();
+bool GameEngine::checkCollision () {
+    const auto& shape = currentTetromino.getShape ();
+    int tetrominoX = currentTetromino.getX ();
+    int tetrominoY = currentTetromino.getY ();
 
-  for (int row = 0; row < 4; row++) {
-    for (int col = 0; col < 4; col++) {
-      if (shape[row][col] == 1) {
-        int boardX = tetrominoX + col;
-        int boardY = tetrominoY + row;
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            if (shape[row][col] == 1) {
+                int boardX = tetrominoX + col;
+                int boardY = tetrominoY + row;
 
-        if (!board.isValidPosition(boardX, boardY)) {
-          return true;
+                if (!board.isValidPosition (boardX, boardY)) {
+                    return true;
+                }
+            }
         }
-      }
     }
-  }
 
-  return false;
+    return false;
 }
 
-void GameEngine::lockTetromino() {
-  const auto &shape = currentTetromino.getShape();
-  int tetrominoX = currentTetromino.getX();
-  int tetrominoY = currentTetromino.getY();
+void GameEngine::lockTetromino () {
+    const auto& shape = currentTetromino.getShape ();
+    int tetrominoX = currentTetromino.getX ();
+    int tetrominoY = currentTetromino.getY ();
 
-  board.lockTetromino(tetrominoX, tetrominoY, shape,
-                      currentTetromino.getType());
-  std::cout << "[GameEngine] Locked at (" << tetrominoX << ", " << tetrominoY
-            << ")\n";
+    board.lockTetromino (tetrominoX, tetrominoY, shape, currentTetromino.getType ());
+    std::cout << "[GameEngine] Locked at (" << tetrominoX << ", " << tetrominoY << ")\n";
+}
+
+void GameEngine::spawnNewTetromino () {
+    std::cout << "[GameEngine] Spawn new tetromino (soft random)\n";
+
+    static std::mt19937 generator (static_cast<unsigned int>(std::time (nullptr)));
+    std::uniform_int_distribution<int> distribution (0, 6);
+
+    int randomType;
+
+    do {
+        randomType = distribution (generator);
+    } while (randomType == lastTetrominoType);
+
+    lastTetrominoType = randomType;
 
   int linesCleared = board.clearFullLines();
   
@@ -559,9 +572,49 @@ void GameEngine::handleMenuSelection() {
     window.close();
     break;
 
-  default:
-    break;
-  }
+        board.reset ();
+        gameState = GameState::Playing;
+        spawnNewTetromino ();
+
+        backgroundMusic.play ();
+        std::cout << "[Audio] Start muzyki\n";
+        break;
+
+    case MenuAction::RESUME:
+        std::cout << "[Menu] Resume\n";
+        gameState = GameState::Playing;
+
+        backgroundMusic.play ();
+
+        break;
+
+    case MenuAction::RESTART:
+        std::cout << "[Menu] Restart\n";
+        board.reset ();
+        mainMenu.setState (MenuState::DIFFICULTY_SELECTION);
+        gameState = GameState::Menu;
+
+        backgroundMusic.stop ();
+        break;
+
+    case MenuAction::MAIN_MENU:
+        std::cout << "[Menu] Main menu\n";
+        board.reset ();
+        mainMenu.setState (MenuState::MAIN_MENU);
+        gameState = GameState::Menu;
+
+        backgroundMusic.stop ();
+        break;
+
+    case MenuAction::EXIT:
+        std::cout << "[Menu] Exit\n";
+        backgroundMusic.stop ();   // 🛑 zatrzymujemy muzykę
+        window.close ();           // ❌ zamykamy okno
+        break;
+
+    default:
+        break;
+    }
 }
 
 void GameEngine::renderGameOver() {
@@ -1163,7 +1216,23 @@ void GameEngine::handleControllerAxis(sf::Joystick::Axis axis, float position) {
     } else {
       dpadDownPressed = false;
     }
-  }
+}
+
+void GameEngine::updateMusicSpeed () {
+    // Bazowe tempo
+    const float basePitch = 1.0f;
+
+    // Jak szybko rośnie tempo (0.02–0.05 to dobre wartości)
+    const float pitchPerLevel = 0.03f;
+
+    // Maksymalne tempo (żeby nie zwariowało)
+    const float maxPitch = 1.6f;
+
+    float pitch = basePitch + currentLevel * pitchPerLevel;
+    if (pitch > maxPitch) pitch = maxPitch;
+
+    backgroundMusic.setPitch (pitch);
+    std::cout << "[Audio] pitch=" << pitch << " level=" << currentLevel << "\n";
 }
 
 /**
