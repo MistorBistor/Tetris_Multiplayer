@@ -400,40 +400,6 @@ void GameEngine::lockTetromino () {
     std::cout << "[GameEngine] Locked at (" << tetrominoX << ", " << tetrominoY << ")\n";
 }
 
-void GameEngine::spawnNewTetromino () {
-    std::cout << "[GameEngine] Spawn new tetromino (soft random)\n";
-
-    static std::mt19937 generator (static_cast<unsigned int>(std::time (nullptr)));
-    std::uniform_int_distribution<int> distribution (0, 6);
-
-    int randomType;
-
-    do {
-        randomType = distribution (generator);
-    } while (randomType == lastTetrominoType);
-
-    lastTetrominoType = randomType;
-
-  // USUNIĘTE: Nie czyścimy linii tutaj, zrobi to animacja
-  // int linesCleared = board.clearFullLines();
-  // if (linesCleared > 0) {
-  //   score.addScore(linesCleared, score.getLevel());
-  // } else {
-  //   score.resetCombo();
-  // }
-}
-
-/**
- * Generuje losowy typ klocka (I, O, T, S, Z, J, L).
- */
-TetrominoType GameEngine::getRandomTetrominoType() {
-  static std::mt19937 generator(static_cast<unsigned int>(std::time(nullptr)));
-  std::uniform_int_distribution<int> distribution(0, 6);
-  
-  int randomType = distribution(generator);
-  return static_cast<TetrominoType>(randomType);
-}
-
 void GameEngine::spawnNewTetromino() {
   std::cout << "[GameEngine] Spawn new tetromino\n";
 
@@ -464,6 +430,19 @@ void GameEngine::spawnNewTetromino() {
     isTypingName = false;
   }
 }
+
+/**
+ * Generuje losowy typ klocka (I, O, T, S, Z, J, L).
+ */
+TetrominoType GameEngine::getRandomTetrominoType() {
+  static std::mt19937 generator(static_cast<unsigned int>(std::time(nullptr)));
+  std::uniform_int_distribution<int> distribution(0, 6);
+  
+  int randomType = distribution(generator);
+  return static_cast<TetrominoType>(randomType);
+}
+
+//
 
 void GameEngine::loadAudio () {
     std::cout << "[Audio] CWD = " << std::filesystem::current_path ().string () << "\n";
@@ -586,49 +565,9 @@ void GameEngine::handleMenuSelection() {
     break;
 
   case MenuAction::EXIT:
-    std::cout << "[Menu] Exit\n";
-    backgroundMusic.stop();
-    window.close();
-    break;
-
-        board.reset ();
-        gameState = GameState::Playing;
-        spawnNewTetromino ();
-
-        backgroundMusic.play ();
-        std::cout << "[Audio] Start muzyki\n";
-        break;
-
-    case MenuAction::RESUME:
-        std::cout << "[Menu] Resume\n";
-        gameState = GameState::Playing;
-
-        backgroundMusic.play ();
-
-        break;
-
-    case MenuAction::RESTART:
-        std::cout << "[Menu] Restart\n";
-        board.reset ();
-        mainMenu.setState (MenuState::DIFFICULTY_SELECTION);
-        gameState = GameState::Menu;
-
-        backgroundMusic.stop ();
-        break;
-
-    case MenuAction::MAIN_MENU:
-        std::cout << "[Menu] Main menu\n";
-        board.reset ();
-        mainMenu.setState (MenuState::MAIN_MENU);
-        gameState = GameState::Menu;
-
-        backgroundMusic.stop ();
-        break;
-
-    case MenuAction::EXIT:
         std::cout << "[Menu] Exit\n";
-        backgroundMusic.stop ();   // 🛑 zatrzymujemy muzykę
-        window.close ();           // ❌ zamykamy okno
+        backgroundMusic.stop();   // 🛑 zatrzymujemy muzykę
+        window.close();           // ❌ zamykamy okno
         break;
 
     default:
@@ -1217,59 +1156,46 @@ void GameEngine::handleControllerButton(unsigned int button) {
  * Axis 6 (PovX) i 7 (PovY) to D-pad.
  */
 void GameEngine::handleControllerAxis(sf::Joystick::Axis axis, float position) {
-  static bool dpadLeftPressed = false;
-  static bool dpadRightPressed = false;
-  static bool dpadDownPressed = false;
-  
-  const float threshold = 50.0f;
-  
-  // D-pad lewo/prawo (Axis::PovX)
-  if (axis == sf::Joystick::PovX) {
-    if (position < -threshold && !dpadLeftPressed) {
-      std::cout << "[Controller] D-pad LEFT\n";
-      handleKeyPress(sf::Keyboard::Left);
-      dpadLeftPressed = true;
-    } else if (position > threshold && !dpadRightPressed) {
-      std::cout << "[Controller] D-pad RIGHT\n";
-      handleKeyPress(sf::Keyboard::Right);
-      dpadRightPressed = true;
-    } else if (position > -threshold && position < threshold) {
-      dpadLeftPressed = false;
-      dpadRightPressed = false;
+    static bool dpadLeftPressed = false;
+    static bool dpadRightPressed = false;
+    static bool dpadDownPressed = false;
+
+    const float threshold = 50.0f;
+
+    // D-pad lewo/prawo (Axis::PovX)
+    if (axis == sf::Joystick::PovX) {
+        if (position < -threshold && !dpadLeftPressed) {
+            std::cout << "[Controller] D-pad LEFT\n";
+            handleKeyPress(sf::Keyboard::Left);
+            dpadLeftPressed = true;
+        }
+        else if (position > threshold && !dpadRightPressed) {
+            std::cout << "[Controller] D-pad RIGHT\n";
+            handleKeyPress(sf::Keyboard::Right);
+            dpadRightPressed = true;
+        }
+        else if (position > -threshold && position < threshold) {
+            dpadLeftPressed = false;
+            dpadRightPressed = false;
+        }
     }
-  }
-  
-  // D-pad góra/dół (Axis::PovY) - NAPRAWIONE: Y < 0 to GÓRA, Y > 0 to DÓŁ
-  if (axis == sf::Joystick::PovY) {
-    // UWAGA: Dla PovY wartości są odwrócone!
-    // position < 0 = DÓŁ (down)
-    // position > 0 = GÓRA (up)
-    
-    if (position < -threshold) {
-      // DÓŁ - soft drop (ciągłe)
-      std::cout << "[Controller] D-pad DOWN (soft drop)\n";
-      handleKeyPress(sf::Keyboard::Down);
-      dpadDownPressed = true;
-    } else {
-      dpadDownPressed = false;
+
+    // D-pad góra/dół (Axis::PovY) - NAPRAWIONE: Y < 0 to GÓRA, Y > 0 to DÓŁ
+    if (axis == sf::Joystick::PovY) {
+        // UWAGA: Dla PovY wartości są odwrócone!
+        // position < 0 = DÓŁ (down)
+        // position > 0 = GÓRA (up)
+
+        if (position < -threshold) {
+            // DÓŁ - soft drop (ciągłe)
+            std::cout << "[Controller] D-pad DOWN (soft drop)\n";
+            handleKeyPress(sf::Keyboard::Down);
+            dpadDownPressed = true;
+        }
+        else {
+            dpadDownPressed = false;
+        }
     }
-}
-
-void GameEngine::updateMusicSpeed () {
-    // Bazowe tempo
-    const float basePitch = 1.0f;
-
-    // Jak szybko rośnie tempo (0.02–0.05 to dobre wartości)
-    const float pitchPerLevel = 0.03f;
-
-    // Maksymalne tempo (żeby nie zwariowało)
-    const float maxPitch = 1.6f;
-
-    float pitch = basePitch + currentLevel * pitchPerLevel;
-    if (pitch > maxPitch) pitch = maxPitch;
-
-    backgroundMusic.setPitch (pitch);
-    std::cout << "[Audio] pitch=" << pitch << " level=" << currentLevel << "\n";
 }
 
 /**
