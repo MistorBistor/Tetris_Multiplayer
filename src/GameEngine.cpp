@@ -66,7 +66,7 @@ void GameEngine::run() {
       update (deltaTime);
     }
 
-    render ();
+    render();
   }
 }
 
@@ -86,7 +86,7 @@ void GameEngine::handleEvents () {
             } else if (gameState == GameState::Playing) {
                 handleControllerButton(event.joystickButton.button);
             } else if (gameState == GameState::GameOver) {
-                // obsługa kontrolera w Game Over
+                // Obsługa kontrolera w Game Over
                 if (event.joystickButton.button == 0) {  // A - Potwierdź
                     if (selectedGameOverElement == 1) {  // Confirm
                         saveHighScore();
@@ -111,7 +111,7 @@ void GameEngine::handleEvents () {
             } else if (gameState == GameState::Playing) {
                 handleControllerAxis(event.joystickMove.axis, event.joystickMove.position);
             } else if (gameState == GameState::GameOver) {
-                // nawigacja kontrolerem w Game Over
+                // Nawigacja kontrolerem w Game Over
                 static bool upPressed = false;
                 static bool downPressed = false;
                 const float threshold = 50.0f;
@@ -189,8 +189,6 @@ void GameEngine::handleEvents () {
                     backgroundMusic.pause ();
                 }
                 else {
-                    //  Podczas animacji czyszczenia linii ignorujemy sterowanie klockiem
-                    // (ESC nadal działa)
                     if (board.isLineClearAnimating ()) {
                         continue;
                     }
@@ -200,39 +198,66 @@ void GameEngine::handleEvents () {
             }
         }
 
-        // GAME OVER: dowolny klawisz lub kliknięcie -> powrót do MAIN MENU
+        // GAME OVER
         if (gameState == GameState::GameOver) {
-            if (event.type == sf::Event::KeyPressed ||
-                (event.type == sf::Event::MouseButtonPressed &&
-                    event.mouseButton.button == sf::Mouse::Left)) {
-
-                std::cout << "[GameEngine] Game Over -> Main Menu\n";
-
-                board.reset ();
-                mainMenu.setState (MenuState::MAIN_MENU);
-                gameState = GameState::Menu;
-
-                backgroundMusic.stop (); // na wszelki wypadek
-            }
-
-            continue; // nie przepuszczamy eventów dalej
+            handleGameOverInput(event);
+            continue;
         }
     }
 }
 
-void GameEngine::update (float deltaTime) {
-    
-	
+void GameEngine::update(float deltaTime) {
+    // Ciągłe sprawdzanie D-pada dla soft drop (kontroler)
+    if (sf::Joystick::isConnected(0)) {
+        float povY = sf::Joystick::getAxisPosition(0, sf::Joystick::PovY);
+        if (povY < -50.0f) {  // D-pad w dół (wartości są odwrócone)
+            // Soft drop - szybsze opadanie
+            static float softDropTimer = 0.0f;
+            softDropTimer += deltaTime;
+            
+            const float softDropSpeed = 0.05f;  // Bardzo szybko
+            if (softDropTimer >= softDropSpeed) {
+                softDropTimer = 0.0f;
+                currentTetromino.moveDown();
+                
+                if (checkCollision()) {
+                    currentTetromino.moveUp();
+                    if (!isLocking) {
+                        isLocking = true;
+                        lockTimer = 0.0f;
+                        hasTouchedGround = true;
+                    }
+                    if (sfxLanded.getStatus() != sf::Sound::Playing)
+                        sfxLanded.play();
+                }
+            }
+        }
+    }
 
-    //  Jeśli trwa animacja czyszczenia linii – gra stoi, tylko animujemy
-    if (board.isLineClearAnimating ()) {
-        int cleared = board.updateClearAnimation (deltaTime);
+    // Animacja czyszczenia linii
+    if (board.isLineClearAnimating()) {
+        int cleared = board.updateClearAnimation(deltaTime);
         if (cleared > 0) {
             std::cout << "[GameEngine] Cleared lines (after anim): " << cleared << "\n";
-            updateLevelAndSpeed (cleared);
-            spawnNewTetromino ();
+            
+            // DODANE: Dodaj score i zwiększ level
+            score.addScore(cleared, score.getLevel());
+            updateLevelAndSpeed(cleared);
+            
+            spawnNewTetromino();
         }
         return;
+    }
+
+    // Jeśli nie było animacji czyszczenia, resetuj combo
+    static bool wasClearing = false;
+    if (wasClearing && !board.isLineClearAnimating()) {
+        // Animacja się skończyła, ale nie było linii
+        score.resetCombo();
+        wasClearing = false;
+    }
+    if (board.isLineClearAnimating()) {
+        wasClearing = true;
     }
 
     fallTimer += deltaTime;
@@ -240,18 +265,16 @@ void GameEngine::update (float deltaTime) {
     if (fallTimer >= fallSpeed) {
         fallTimer = 0.0f;
 
-        std::cout << "[GameEngine] Falling, y=" << currentTetromino.getY () << "\n";
-        currentTetromino.moveDown ();
+        std::cout << "[GameEngine] Falling, y=" << currentTetromino.getY() << "\n";
+        currentTetromino.moveDown();
 
-        if (checkCollision ()) {
-            currentTetromino.moveUp ();
+        if (checkCollision()) {
+            currentTetromino.moveUp();
 
-            // Klocek DOTKNĄŁ podłoża (od tego momentu zaczynamy liczyć ruchy)
             if (!hasTouchedGround) {
                 hasTouchedGround = true;
                 lockMoveCounter = 0;
                 std::cout << "[LockDelay] First touch -> start counting moves\n";
-                
             }
 
             if (!isLocking) {
@@ -259,19 +282,11 @@ void GameEngine::update (float deltaTime) {
                 isLocking = true;
                 lockTimer = 0.0f;
 
-                // UWAGA: NIE resetujemy lockMoveCounter tutaj,
-                // bo wall kick/rotacje potrafią chwilowo odrywać klocek od ziemi
-                // i wtedy licznik by się "odnawiał".
-
-                if (sfxLanded.getStatus () != sf::Sound::Playing)
-                    sfxLanded.play ();
+                if (sfxLanded.getStatus() != sf::Sound::Playing)
+                    sfxLanded.play();
             }
         }
         else {
-            // Klocek faktycznie spadł w dół.
-            // UWAGA: NIE resetujemy lockMoveCounter tutaj (to robi exploit).
-            // Lock delay możemy anulować, ale licznik zostaje.
-
             if (isLocking) {
                 std::cout << "[GameEngine] Cancel lock delay\n";
                 isLocking = false;
@@ -281,33 +296,24 @@ void GameEngine::update (float deltaTime) {
     }
 
     if (isLocking) {
-
-        // Jeśli po kicku klocek NIE stoi już na ziemi, to nie odliczamy lock delay
-        // i przede wszystkim nie wolno blokować "w powietrzu".
-        if (!isPieceGrounded ()) {
-            // NIE resetujemy lockMoveCounter.
-            // Po ponownym kontakcie limit nadal obowiązuje.
+        if (!isPieceGrounded()) {
             isLocking = false;
             lockTimer = 0.0f;
             return;
         }
 
-        // Anti infinite spin – wymuszony lock po X ruchach/rotacjach
-        // Liczymy tylko jeśli klocek kiedykolwiek dotknął podłoża.
         if (hasTouchedGround && lockMoveCounter >= maxLockMoves) {
             std::cout << "[LockDelay] Max moves reached -> force lock\n";
+            lockTetromino();
 
-            lockTetromino ();
-
-            //  Nie spawnujemy od razu jeśli są linie do animacji
-            if (board.startClearAnimation ()) {
-                sfxLineClear.play ();
+            if (board.startClearAnimation()) {
+                sfxLineClear.play();
             }
             else {
-                spawnNewTetromino ();
+                // Jeśli nie ma linii do wyczyszczenia, resetuj combo
+                score.resetCombo();
+                spawnNewTetromino();
             }
-
-            // spawnNewTetromino() i tak resetuje timery/liczniki/flagę
             return;
         }
 
@@ -315,16 +321,16 @@ void GameEngine::update (float deltaTime) {
 
         if (lockTimer >= lockDelay) {
             std::cout << "[GameEngine] Lock piece (time)\n";
-            lockTetromino ();
+            lockTetromino();
 
-            //  Nie spawnujemy od razu jeśli są linie do animacji
-            if (board.startClearAnimation ()) {
-                sfxLineClear.play ();
+            if (board.startClearAnimation()) {
+                sfxLineClear.play();
             }
             else {
-                spawnNewTetromino ();
+                // Jeśli nie ma linii do wyczyszczenia, resetuj combo
+                score.resetCombo();
+                spawnNewTetromino();
             }
-
             return;
         }
     }
@@ -395,14 +401,13 @@ void GameEngine::lockTetromino() {
   std::cout << "[GameEngine] Locked at (" << tetrominoX << ", " << tetrominoY
             << ")\n";
 
-  int linesCleared = board.clearFullLines();
-  
-  if (linesCleared > 0) {
-    std::cout << "[GameEngine] Cleared lines: " << linesCleared << "\n";
-    score.addScore(linesCleared, score.getLevel());
-  } else {
-    score.resetCombo();
-  }
+  // USUNIĘTE: Nie czyścimy linii tutaj, zrobi to animacja
+  // int linesCleared = board.clearFullLines();
+  // if (linesCleared > 0) {
+  //   score.addScore(linesCleared, score.getLevel());
+  // } else {
+  //   score.resetCombo();
+  // }
 }
 
 /**
@@ -500,12 +505,24 @@ void GameEngine::handleMenuSelection() {
     mainMenu.setState(MenuState::DIFFICULTY_SELECTION);
     break;
 
+  case MenuAction::HIGH_SCORES:
+    std::cout << "[Menu] -> High Scores\n";
+    // TODO: Przejdź do ekranu High Scores
+    // Na razie tylko wyświetl komunikat
+    std::cout << "[Menu] High Scores - not implemented yet\n";
+    break;
+
+  case MenuAction::SETTINGS:
+    std::cout << "[Menu] -> Settings\n";
+    mainMenu.setState(MenuState::SETTINGS);
+    break;
+
   case MenuAction::CONFIRM_DIFFICULTY:
     std::cout << "[Menu] Start game\n";
     fallSpeed = mainMenu.getDifficultySpeed();
     startLevel = mainMenu.getSelectedDifficulty();
     currentLevel = startLevel;
-    totalLinesCleared = 0;
+    totalLinesCleared = 0;  // WAŻNE: Reset licznika linii
 
     fallSpeed = getFallSpeedForLevel(currentLevel);
     updateMusicSpeed();
@@ -513,17 +530,19 @@ void GameEngine::handleMenuSelection() {
 
     board.reset();
     score.reset();
+    
+    // Ustaw level w Score zgodnie z wybraną trudnością
+    for (int i = 0; i < startLevel; i++) {
+        score.increaseLevel();
+    }
+    
     nextQueue.clear();
     for (int i = 0; i < 5; i++) {
-      nextQueue.push_back(getRandomTetrominoType());
+        nextQueue.push_back(getRandomTetrominoType());
     }
     heldTetrominoType = TetrominoType::Empty;
     hasHeldPiece = false;
     canHold = true;
-    
-    for (int i = 0; i < mainMenu.getSelectedDifficulty(); i++) {
-      score.increaseLevel();
-    }
     
     gameState = GameState::Playing;
     spawnNewTetromino();
@@ -583,7 +602,7 @@ void GameEngine::renderGameOver() {
     gameOverText.setPosition(400.f, 150.f);
     window.draw(gameOverText);
 
-    // Wynik gracza - POPRAWIONE
+    // Wynik gracza
     sf::Text scoreText;
     scoreText.setFont(mainMenu.getFont());
     scoreText.setString("Your Score: " + std::to_string(score.getCurrentScore()));
@@ -598,7 +617,7 @@ void GameEngine::renderGameOver() {
     // Input field dla nazwy
     sf::RectangleShape inputBox(sf::Vector2f(200, 40));
     inputBox.setPosition(300, 280);
-    inputBox.setFillColor(sf::Color(50, 50, 50));
+    inputBox.setFillColor(sf::Color(40, 40, 60));  // Ciemny niebieski
     inputBox.setOutlineThickness(2);
     inputBox.setOutlineColor(selectedGameOverElement == 0 ? sf::Color::Yellow : sf::Color::White);
     window.draw(inputBox);
@@ -620,27 +639,11 @@ void GameEngine::renderGameOver() {
     nameText.setFillColor(sf::Color::White);
     nameText.setPosition(310, 285);
     window.draw(nameText);
-
-    // Przycisk Confirm
-    sf::RectangleShape confirmButton(sf::Vector2f(80, 40));
-    confirmButton.setPosition(300, 350);
-    confirmButton.setFillColor(sf::Color(50, 50, 50));
-    confirmButton.setOutlineThickness(2);
-    confirmButton.setOutlineColor(selectedGameOverElement == 1 ? sf::Color::Yellow : sf::Color::White);
-    window.draw(confirmButton);
-
-    sf::Text confirmText;
-    confirmText.setFont(mainMenu.getFont());
-    confirmText.setString("Confirm");
-    confirmText.setCharacterSize(20);
-    confirmText.setFillColor(selectedGameOverElement == 1 ? sf::Color::Yellow : sf::Color::White);
-    confirmText.setPosition(310, 360);
-    window.draw(confirmText);
-
+   
     // Przycisk Main Menu
     sf::RectangleShape menuButton(sf::Vector2f(100, 40));
-    menuButton.setPosition(400, 350);
-    menuButton.setFillColor(sf::Color(50, 50, 50));
+    menuButton.setPosition(290, 350);
+    menuButton.setFillColor(selectedGameOverElement == 2 ? sf::Color(200, 50, 50) : sf::Color(120, 30, 30));
     menuButton.setOutlineThickness(2);
     menuButton.setOutlineColor(selectedGameOverElement == 2 ? sf::Color::Yellow : sf::Color::White);
     window.draw(menuButton);
@@ -649,9 +652,33 @@ void GameEngine::renderGameOver() {
     menuText.setFont(mainMenu.getFont());
     menuText.setString("Main Menu");
     menuText.setCharacterSize(18);
-    menuText.setFillColor(selectedGameOverElement == 2 ? sf::Color::Yellow : sf::Color::White);
-    menuText.setPosition(410, 362);
+    menuText.setFillColor(sf::Color::White);
+    
+    // wyswordkowanie tekstu Main Menu
+    sf::FloatRect menuBounds = menuText.getLocalBounds();
+    menuText.setOrigin(menuBounds.left + menuBounds.width / 2.f, menuBounds.top + menuBounds.height / 2.f);
+    menuText.setPosition(340.f, 370.f);  // Środek przycisku: 290 + 100/2 = 340
     window.draw(menuText);
+
+    // Przycisk Confirm
+    sf::RectangleShape confirmButton(sf::Vector2f(100, 40));
+    confirmButton.setPosition(410, 350);
+    confirmButton.setFillColor(selectedGameOverElement == 1 ? sf::Color(50, 200, 50) : sf::Color(30, 120, 30));
+    confirmButton.setOutlineThickness(2);
+    confirmButton.setOutlineColor(selectedGameOverElement == 1 ? sf::Color::Yellow : sf::Color::White);
+    window.draw(confirmButton);
+
+    sf::Text confirmText;
+    confirmText.setFont(mainMenu.getFont());
+    confirmText.setString("Confirm");
+    confirmText.setCharacterSize(20);
+    confirmText.setFillColor(sf::Color::White);
+    
+    // wyswordkowanie tekstu Confirm
+    sf::FloatRect confirmBounds = confirmText.getLocalBounds();
+    confirmText.setOrigin(confirmBounds.left + confirmBounds.width / 2.f, confirmBounds.top + confirmBounds.height / 2.f);
+    confirmText.setPosition(460.f, 370.f);  // Środek przycisku: 410 + 100/2 = 460
+    window.draw(confirmText);
 
     // Instrukcja
     sf::Text infoText;
@@ -771,21 +798,28 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
     }
     else if (key == sf::Keyboard::Space) {
         std::cout << "[Input] SPACE (hard drop)\n";
-        while (!checkCollision ()) {
-            currentTetromino.moveDown ();
+        while (!checkCollision()) {
+            currentTetromino.moveDown();
         }
-        currentTetromino.moveUp ();
-        lockTetromino ();
-        if (sfxLanded.getStatus () != sf::Sound::Playing)
-            sfxLanded.play ();
+        currentTetromino.moveUp();
+        lockTetromino();
+        if (sfxLanded.getStatus() != sf::Sound::Playing)
+            sfxLanded.play();
 
-        if (board.startClearAnimation ()) {
-            sfxLineClear.play ();
+        // Sprawdź czy są linie do animacji
+        if (board.startClearAnimation()) {
+            sfxLineClear.play();
         }
         else {
-            spawnNewTetromino ();
+            score.resetCombo();
+            spawnNewTetromino();
+        
+            // Jeśli spawn spowodował Game Over, nie rób nic więcej
+            if (gameState == GameState::GameOver) {
+                return;
+            }
         }
-    }
+}
     else if (key == sf::Keyboard::Up) {
         std::cout << "[Input] Gracz naciska: GÓRA (rotacja + wall kick)\n";
 
@@ -862,14 +896,15 @@ void GameEngine::handleKeyPress (sf::Keyboard::Key key) {
     }
 }
 
-bool GameEngine::isPieceGrounded () {
+
+bool GameEngine::isPieceGrounded() {
     currentTetromino.moveDown ();
     const bool coll = checkCollision ();
     currentTetromino.moveUp ();
     return coll;
 }
 
-float GameEngine::getFallSpeedForLevel (int level) const {
+float GameEngine::getFallSpeedForLevel(int level) const {
     // Twoje levele 0–9 (dokładnie to, co masz w Menu)
     static const int framesPerDrop[] = {
       48, 43, 38, 33, 28, 23, 18, 13, 8, 6
@@ -888,29 +923,33 @@ float GameEngine::getFallSpeedForLevel (int level) const {
     return frames / 60.0f;
 }
 
-void GameEngine::updateLevelAndSpeed (int linesJustCleared) {
+void GameEngine::updateLevelAndSpeed(int linesJustCleared) {
     totalLinesCleared += linesJustCleared;
 
-    // klasyczna zasada Tetrisa
     int oldLevel = currentLevel;
-    currentLevel = startLevel + (totalLinesCleared / 10);
+    currentLevel = startLevel + (totalLinesCleared / 10);  // Co 10 linii = +1 level
 
-    fallSpeed = getFallSpeedForLevel (currentLevel);
+    fallSpeed = getFallSpeedForLevel(currentLevel);
 
     std::cout << "[LEVEL] start=" << startLevel
-        << " lines=" << totalLinesCleared
-        << " level=" << currentLevel
-        << " fallSpeed=" << fallSpeed << "\n";
+              << " lines=" << totalLinesCleared
+              << " level=" << currentLevel
+              << " fallSpeed=" << fallSpeed << "\n";
+
+    // Aktualizuj level w Score
+    while (score.getLevel() < currentLevel) {
+        score.increaseLevel();
+    }
 
     // Przyspiesz muzykę tylko gdy level poszedł w górę
     if (currentLevel != oldLevel) {
-        updateMusicSpeed ();
-        board.updateClearAnimSpeed (currentLevel); // przyspiesza animację linii
+        updateMusicSpeed();
+        board.updateClearAnimSpeed(currentLevel);
         std::cout << "[LEVEL UP] " << oldLevel << " -> " << currentLevel << "\n";
     }
 }
 
-void GameEngine::updateMusicSpeed () {
+void GameEngine::updateMusicSpeed() {
     // Bazowe tempo
     const float basePitch = 1.0f;
 
@@ -926,6 +965,7 @@ void GameEngine::updateMusicSpeed () {
     backgroundMusic.setPitch (pitch);
     std::cout << "[Audio] pitch=" << pitch << " level=" << currentLevel << "\n";
 }
+
 /**
  * Zatrzymuje aktualny klocek i zamienia go z held piece.
  * Jeśli nie ma held piece, aktualny klocek zostaje zatrzymany i spawni się nowy.
@@ -958,12 +998,9 @@ void GameEngine::holdCurrentPiece() {
   isLocking = false;
   lockTimer = 0.0f;
 }
+
 /**
  * Pomocnicza funkcja do renderowania podglądu klocka.
- */
-/**
- * Pomocnicza funkcja do renderowania podglądu klocka.
- * NAPRAWIONE: Nie tworzy nowego Tetromino, tylko bezpośrednio rysuje kształt.
  */
 void GameEngine::renderTetrominoPreview(sf::RenderWindow& window, TetrominoType type, float x, float y) const {
   if (type == TetrominoType::Empty) {
@@ -1314,57 +1351,70 @@ void GameEngine::handleGameOverInput(sf::Event& event) {
         } else if (event.text.unicode == '\r' || event.text.unicode == '\n') {  // Enter
             isTypingName = false;
             selectedGameOverElement = 1;  // Przejdź do Confirm
-        } else if (event.text.unicode < 128 && playerName.length() < 15) {  // Limit 15 znaków
+        } else if (event.text.unicode < 128 && playerName.length() < 15) {
             char c = static_cast<char>(event.text.unicode);
             if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || 
                 (c >= '0' && c <= '9') || c == ' ' || c == '_') {
                 playerName += c;
             }
         }
+        return;  // WAŻNE: Gdy piszemy, nie obsługujemy innych klawiszy
     }
 
     // Klawiatura - nawigacja
-    if (event.type == sf::Event::KeyPressed && !isTypingName) {
+    if (event.type == sf::Event::KeyPressed) {
         if (event.key.code == sf::Keyboard::Up) {
             selectedGameOverElement--;
             if (selectedGameOverElement < 0) selectedGameOverElement = 2;
+            isTypingName = false;  // Wyłącz tryb pisania przy nawigacji
             sfxMenu.play();
         } else if (event.key.code == sf::Keyboard::Down) {
             selectedGameOverElement++;
             if (selectedGameOverElement > 2) selectedGameOverElement = 0;
+            isTypingName = false;  // Wyłącz tryb pisania przy nawigacji
             sfxMenu.play();
+        } else if (event.key.code == sf::Keyboard::Left || event.key.code == sf::Keyboard::Right) {
+            if (selectedGameOverElement == 1) {
+                selectedGameOverElement = 2;
+                sfxMenu.play();
+            } else if (selectedGameOverElement == 2) {
+                selectedGameOverElement = 1;
+                sfxMenu.play();
+            }
         } else if (event.key.code == sf::Keyboard::Enter) {
             if (selectedGameOverElement == 0) {  // Input field
-                isTypingName = true;
+                isTypingName = !isTypingName;  
+                std::cout << "[GameOver] Typing mode: " << (isTypingName ? "ON" : "OFF") << "\n";
             } else if (selectedGameOverElement == 1) {  // Confirm
                 saveHighScore();
                 board.reset();
+                score.reset();
                 mainMenu.setState(MenuState::MAIN_MENU);
                 gameState = GameState::Menu;
                 sfxMenu.play();
-            } else if (selectedGameOverElement == 2) {  // Main Menu (bez zapisu)
+            } else if (selectedGameOverElement == 2) {  // Main Menu
                 board.reset();
+                score.reset();
                 mainMenu.setState(MenuState::MAIN_MENU);
                 gameState = GameState::Menu;
                 sfxMenu.play();
             }
         } else if (event.key.code == sf::Keyboard::Escape) {
-            // ESC w Game Over - powrót do menu bez zapisu
             board.reset();
+            score.reset();
             mainMenu.setState(MenuState::MAIN_MENU);
             gameState = GameState::Menu;
         }
     }
 
-    // Kliknięcie myszą w input field
+    // Kliknięcie myszą
     if (event.type == sf::Event::MouseButtonPressed) {
         sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
                              static_cast<float>(event.mouseButton.y));
         
-        // Input field bounds (sprawdzimy w renderGameOver)
         sf::FloatRect inputBounds(300, 280, 200, 40);
-        sf::FloatRect confirmBounds(320, 350, 80, 40);
-        sf::FloatRect menuBounds(420, 350, 80, 40);
+        sf::FloatRect menuBounds(290, 350, 100, 40);
+        sf::FloatRect confirmBounds(410, 350, 100, 40);
         
         if (inputBounds.contains(mousePos)) {
             selectedGameOverElement = 0;
@@ -1373,12 +1423,14 @@ void GameEngine::handleGameOverInput(sf::Event& event) {
             selectedGameOverElement = 1;
             saveHighScore();
             board.reset();
+            score.reset();  // DODANE: Reset score
             mainMenu.setState(MenuState::MAIN_MENU);
             gameState = GameState::Menu;
             sfxMenu.play();
         } else if (menuBounds.contains(mousePos)) {
             selectedGameOverElement = 2;
             board.reset();
+            score.reset();  // DODANE: Reset score
             mainMenu.setState(MenuState::MAIN_MENU);
             gameState = GameState::Menu;
             sfxMenu.play();

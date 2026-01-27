@@ -23,11 +23,11 @@ Menu::~Menu () { std::cout << "Menu - destruktor" << std::endl; }
 /**
  * Inicjalizacja menu - ładuje czcionkę i tworzy teksty.
  */
-void Menu::initialize () {
+void Menu::initialize() {
     std::cout << "Menu - inicjalizacja" << std::endl;
 
     // Ładowanie czcionki
-    if (!font.loadFromFile ("../resources/fonts/SourceSansPro-Regular.otf")) {
+    if (!font.loadFromFile("../resources/fonts/SourceSansPro-Regular.otf")) {
         std::cout << "[ERROR] Nie udało się załadować czcionki!" << std::endl;
         return;
     }
