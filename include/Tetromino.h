@@ -28,4 +28,5 @@ public:
   void moveLeft();
   void moveRight();
   void rotate();
+  void renderGhost (sf::RenderWindow& window);
 };
