@@ -23,19 +23,12 @@ Menu::~Menu () { std::cout << "Menu - destruktor" << std::endl; }
 /**
  * Inicjalizacja menu - ładuje czcionkę i tworzy teksty.
  */
-void Menu::initialize () {
+void Menu::initialize() {
     std::cout << "Menu - inicjalizacja" << std::endl;
 
-    // Ładowanie czcionki z głównego katalogu projektu
-    // Kiedy uruchamiasz z build/Debug/, ścieżka "../.." cofa się do głównego
-    // folderu, możliwa potrzeba modyfikacji później przy zmianie miejsca pliku
-    // .exe
-    if (!font.loadFromFile ("../resources/fonts/SourceSansPro-Regular.otf")) {
+    // Ładowanie czcionki
+    if (!font.loadFromFile("../resources/fonts/SourceSansPro-Regular.otf")) {
         std::cout << "[ERROR] Nie udało się załadować czcionki!" << std::endl;
-        std::cout << "[INFO] Sprawdź czy plik istnieje w: "
-            "../resources/fonts/SourceSansPro-Regular.otf"
-            << std::endl;
-        std::cout << "[INFO] (relatywnie do build/Debug/)" << std::endl;
         return;
     }
 
@@ -80,25 +73,21 @@ void Menu::initialize () {
     rightArrowText.setCharacterSize (50);
     rightArrowText.setFillColor (sf::Color::White);
 
-    // Przycisk Confirm - WAŻNE: najpierw font, potem string!
     confirmButton.setFont (font);
     confirmButton.setString ("Confirm");
     confirmButton.setCharacterSize (30);
     confirmButton.setFillColor (sf::Color::White);
 
-    // Przycisk Back - WAŻNE: najpierw font, potem string!
     backButton.setFont (font);
     backButton.setString ("Back");
     backButton.setCharacterSize (30);
     backButton.setFillColor (sf::Color::White);
 
-    // DEBUG - sprawdzamy czy teksty mają zawartość
     std::cout << "[DEBUG] Confirm text: '"
         << confirmButton.getString ().toAnsiString () << "'" << std::endl;
     std::cout << "[DEBUG] Back text: '" << backButton.getString ().toAnsiString ()
         << "'" << std::endl;
 
-    // Ustawienie początkowego stanu menu
     setState (MenuState::MAIN_MENU);
 }
 
@@ -582,7 +571,7 @@ int Menu::checkDifficultyClick (float mouseX, float mouseY) const {
  */
 void Menu::render (sf::RenderWindow& window) const {
     // Rysujemy półprzezroczyste tło
-    sf::RectangleShape background (sf::Vector2f (WINDOW_WIDTH, WINDOW_HEIGHT));
+    sf::RectangleShape background (sf::Vector2f (800, 700));
     background.setFillColor (sf::Color (0, 0, 0, 200));
     window.draw (background);
 

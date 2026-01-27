@@ -5,8 +5,7 @@
 Tetromino::Tetromino(TetrominoType tetrominoType)
     : x(3), y(0), type(tetrominoType) { // ← To jest OTWARCIE {
 
-  std::cout << "[Tetromino] Tworzenie klocka typu: " << static_cast<int>(type)
-            << '\n';
+  std::cout << "[Tetromino] Tworzenie klocka typu: " << static_cast<int>(type) << '\n';
 
   switch (type) {
   case TetrominoType::I: // Cyan - linia pionowa

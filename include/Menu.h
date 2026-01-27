@@ -63,7 +63,7 @@ private:
   sf::Text confirmButton;
   sf::Text backButton;
 
-  static const int WINDOW_WIDTH = 500;
+  static const int WINDOW_WIDTH = 800;
   static const int WINDOW_HEIGHT = 700;
   static const int TITLE_SIZE = 60;
   static const int ITEM_SIZE = 30;
