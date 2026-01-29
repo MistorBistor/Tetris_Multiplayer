@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <SFML/Audio.hpp>
+#include "ColorTheme.h"
 
 
 /**
@@ -13,11 +14,12 @@
  */
 enum class MenuState {
   MAIN_MENU,
+  HIGH_SCORES,
   GAME,
   PAUSE,
   GAME_OVER,
   SETTINGS,
-  DIFFICULTY_SELECTION
+  DIFFICULTY_SELECTION,
 };
 /**
  * @enum MenuAction
@@ -33,7 +35,8 @@ enum class MenuAction {
   EXIT,
   RESUME,
   RESTART,
-  MAIN_MENU
+  MAIN_MENU,
+  CHANGE_THEME
 };
 /**
  * @class Menu
@@ -74,7 +77,11 @@ private:
   // TODO: Dodać czcionki, teksty i obiekty graficzne SFML
   // TODO: Dodać tło menu
 
- 
+  std::vector<std::pair<std::string, int>> highScores;
+
+  int selectedTheme = 0; // 0 = Classic, 1 = Dark, 2 = Neon
+
+  ColorTheme currentTheme;
 
 public:
   /**
@@ -168,6 +175,14 @@ public:
   void showGameOver(int score, bool isHighScore);
 
   const sf::Font& getFont () const { return font; }
+
+  void setHighScores (const std::vector<std::pair<std::string, int>>& scores) {
+	  highScores = scores;
+  }
+
+  int getSelectedTheme () const { return selectedTheme; }
+
+  void setTheme (const ColorTheme& theme);
 };
 
 #endif // MENU_HPP

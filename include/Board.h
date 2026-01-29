@@ -2,6 +2,7 @@
 #include "TetrominoType.h"
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include "ColorTheme.h"
 
 class Board {
 private:
@@ -24,6 +25,8 @@ private:
   int maxBlinks = 6;             // 6 zmian = ok. 3 „mrugnięcia”
   bool blinkOn = false;
 
+  ColorTheme currentTheme;
+
 public:
   Board(); // konstruktor
   void render(sf::RenderWindow &window);
@@ -45,4 +48,6 @@ public:
 
 
   void reset();
+
+  void setTheme (const ColorTheme& theme);
 };

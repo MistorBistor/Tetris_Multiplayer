@@ -7,6 +7,10 @@
 #include "Tetromino.h"
 #include "TetrominoType.h"
 #include <vector>
+#include <random>
+#include <algorithm>
+#include <array>
+#include "ColorTheme.h"
 
 class GameEngine {
 private:
@@ -93,10 +97,11 @@ private:
 	void renderTetrominoPreview(sf::RenderWindow& window, TetrominoType type, float x, float y) const;
 
 	// Controller support
-	void handleControllerButton(unsigned int button);
-	void handleControllerAxis(sf::Joystick::Axis axis, float position);
-	void handleControllerButtonMenu(unsigned int button);
-	void handleControllerAxisMenu(sf::Joystick::Axis axis, float position);
+	void handleControllerButton (unsigned int button);
+	void handleControllerAxis (sf::Joystick::Axis axis, float position);
+
+	void handleControllerButtonMenu (unsigned int button);
+	void handleControllerAxisMenu (sf::Joystick::Axis axis, float position);
 
 	// Game Over state
 	std::string playerName;
@@ -106,6 +111,24 @@ private:
 	void handleGameOverInput(sf::Event& event);
 	void saveHighScore();
 
+	std::mt19937 rng{ std::random_device{}() };
+
+	// 7-bag (TetrominoType)
+	std::array<TetrominoType, 7> bag = {
+		TetrominoType::I, TetrominoType::O, TetrominoType::T,
+		TetrominoType::S, TetrominoType::Z, TetrominoType::J, TetrominoType::L
+	};
+	int bagIndex = 7; // 7 = pusty -> wymuœ przetasowanie
+
+	TetrominoType nextFromBag ();
+
+	// Game time (sekundy)
+	float gameTimeSec = 0.0f;
+
+	ColorThemeType currentThemeType = ColorThemeType::CLASSIC;
+	ColorTheme currentTheme;
+
+	void applyTheme (ColorThemeType type);
 public:
 	GameEngine();
 	void initialize();
