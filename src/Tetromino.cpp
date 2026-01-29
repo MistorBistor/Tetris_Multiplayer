@@ -2,17 +2,17 @@
 #include <algorithm>
 #include <iostream>
 
-extern ColorTheme CLASSIC_THEME; // ✅ jak w GameEngine
+extern ColorTheme CLASSIC_THEME; //  jak w GameEngine
 
 Tetromino::Tetromino (TetrominoType tetrominoType)
     : x (3), y (0), type (tetrominoType) {
 
     std::cout << "[Tetromino] Tworzenie klocka typu: " << static_cast<int>(type) << '\n';
 
-    // ✅ domyślny motyw (żeby nie było śmieciowych kolorów)
+    //  domyślny motyw (żeby nie było śmieciowych kolorów)
     currentTheme = CLASSIC_THEME;
 
-    // ✅ UWAGA: tu ustawiamy TYLKO shape — kolor wyjdzie z motywu
+    //  UWAGA: tu ustawiamy TYLKO shape — kolor wyjdzie z motywu
     switch (type) {
     case TetrominoType::I:
         shape = { {0, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 0} };
@@ -133,6 +133,6 @@ void Tetromino::rotate () {
 
     shape = rotatedShape;
 
-    // ✅ kolor się nie zmienia na rotacji, ale zostawiam to jako “bezpieczne”
+    //  kolor się nie zmienia na rotacji, ale zostawiam to jako “bezpieczne”
     updateColorFromTheme ();
 }

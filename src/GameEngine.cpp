@@ -59,6 +59,7 @@ void GameEngine::initialize () {
     canHold = true;
 
     currentTetromino = Tetromino (TetrominoType::I);
+    currentTetromino.setTheme (currentTheme);
 
     loadAudio ();
 
@@ -998,20 +999,19 @@ void GameEngine::holdCurrentPiece () {
     TetrominoType currentType = currentTetromino.getType ();
 
     if (hasHeldPiece) {
-        currentTetromino = Tetromino(heldTetrominoType);
-        currentTetromino.setTheme(currentTheme);
+        currentTetromino = Tetromino (heldTetrominoType);
+        currentTetromino.setTheme (currentTheme);
         heldTetrominoType = currentType;
-}
- else {
-     heldTetrominoType = currentType;
-     hasHeldPiece = true;
+    }
+    else {
+        heldTetrominoType = currentType;
+        hasHeldPiece = true;
 
-     // ZMIENIONE: Spawnuj z kolejki
-     currentTetromino = Tetromino (nextQueue[0]);
-     currentTetromino.setTheme (currentTheme);
-     nextQueue.erase (nextQueue.begin ());
-     nextQueue.push_back (getRandomTetrominoType ());
-}
+        currentTetromino = Tetromino (nextQueue[0]);
+        currentTetromino.setTheme (currentTheme);
+        nextQueue.erase (nextQueue.begin ());
+        nextQueue.push_back (getRandomTetrominoType ());
+    }
 
     canHold = false;
     fallTimer = 0.0f;
@@ -1118,12 +1118,205 @@ void GameEngine::renderNextPiece (sf::RenderWindow& window) const {
     window.draw (titleText);
 
     for (size_t i = 0; i < nextQueue.size () && i < 4; i++) {
-        float yPos = topPosition + 50 + i * 97;
+        float yPos = topPosition + 50 + static_cast<float> (i) * 97.0f;
         renderTetrominoPreview (window, nextQueue[i], leftMargin + 30, yPos);
     }
 }
 
+void GameEngine::handleControllerButton (unsigned int button) {
+    if (board.isLineClearAnimating ()) {
+        return;
+    }
 
+    if (button == 0) {
+        handleKeyPress (sf::Keyboard::Up);
+    }
+    else if (button == 1) {
+        handleKeyPress (sf::Keyboard::H);
+    }
+    else if (button == 2) {
+        handleKeyPress (sf::Keyboard::Space);
+    }
+    else if (button == 7) {
+        sf::Event e;
+        e.type = sf::Event::KeyPressed;
+        e.key.code = sf::Keyboard::Escape;
+        window.pollEvent (e);
+    }
+}
+
+void GameEngine::handleControllerAxis (sf::Joystick::Axis axis, float position) {
+    const float threshold = 50.0f;
+
+    static bool leftPressed = false;
+    static bool rightPressed = false;
+
+    if (axis == sf::Joystick::PovX) {
+        if (position < -threshold && !leftPressed) {
+            handleKeyPress (sf::Keyboard::Left);
+            leftPressed = true;
+            rightPressed = false;
+        }
+        else if (position > threshold && !rightPressed) {
+            handleKeyPress (sf::Keyboard::Right);
+            rightPressed = true;
+            leftPressed = false;
+        }
+        else if (position > -threshold && position < threshold) {
+            leftPressed = false;
+            rightPressed = false;
+        }
+    }
+}
+
+void GameEngine::handleControllerButtonMenu (unsigned int button) {
+    if (button == 0) {
+        handleMenuSelection ();
+        return;
+    }
+
+    if (button == 1) {
+        if (mainMenu.getState () == MenuState::DIFFICULTY_SELECTION) {
+            mainMenu.setState (MenuState::MAIN_MENU);
+        }
+        else if (mainMenu.getState () == MenuState::HIGH_SCORES) {
+            mainMenu.setState (MenuState::MAIN_MENU);
+        }
+        else if (mainMenu.getState () == MenuState::SETTINGS) {
+            mainMenu.setState (MenuState::MAIN_MENU);
+        }
+        else if (mainMenu.getState () == MenuState::PAUSE) {
+            mainMenu.setState (MenuState::MAIN_MENU);
+        }
+        sfxMenu.play ();
+        return;
+    }
+}
+
+void GameEngine::handleControllerAxisMenu (sf::Joystick::Axis axis, float position) {
+    const float threshold = 50.0f;
+
+    static bool upPressed = false;
+    static bool downPressed = false;
+
+    if (axis == sf::Joystick::PovY) {
+        if (position > threshold && !upPressed) {
+            sf::Event e;
+            e.type = sf::Event::KeyPressed;
+            e.key.code = sf::Keyboard::Up;
+            mainMenu.handleEvent (e);
+            sfxMenu.play ();
+            upPressed = true;
+            downPressed = false;
+        }
+        else if (position < -threshold && !downPressed) {
+            sf::Event e;
+            e.type = sf::Event::KeyPressed;
+            e.key.code = sf::Keyboard::Down;
+            mainMenu.handleEvent (e);
+            sfxMenu.play ();
+            downPressed = true;
+            upPressed = false;
+        }
+        else if (position > -threshold && position < threshold) {
+            upPressed = false;
+            downPressed = false;
+        }
+    }
+}
+
+void GameEngine::handleGameOverInput (sf::Event& event) {
+    if (event.type == sf::Event::KeyPressed) {
+        if (event.key.code == sf::Keyboard::Up) {
+            selectedGameOverElement--;
+            if (selectedGameOverElement < 0) selectedGameOverElement = 2;
+            sfxMenu.play ();
+        }
+        else if (event.key.code == sf::Keyboard::Down) {
+            selectedGameOverElement++;
+            if (selectedGameOverElement > 2) selectedGameOverElement = 0;
+            sfxMenu.play ();
+        }
+        else if (event.key.code == sf::Keyboard::Enter) {
+            if (selectedGameOverElement == 1) {
+                saveHighScore ();
+                board.reset ();
+                mainMenu.setState (MenuState::MAIN_MENU);
+                gameState = GameState::Menu;
+                sfxMenu.play ();
+            }
+            else if (selectedGameOverElement == 2) {
+                board.reset ();
+                mainMenu.setState (MenuState::MAIN_MENU);
+                gameState = GameState::Menu;
+                sfxMenu.play ();
+            }
+            else if (selectedGameOverElement == 0) {
+                isTypingName = !isTypingName;
+                sfxMenu.play ();
+            }
+        }
+        else if (event.key.code == sf::Keyboard::BackSpace) {
+            if (isTypingName && !playerName.empty ()) {
+                playerName.pop_back ();
+            }
+        }
+        else if (event.key.code == sf::Keyboard::Escape) {
+            board.reset ();
+            mainMenu.setState (MenuState::MAIN_MENU);
+            gameState = GameState::Menu;
+        }
+    }
+
+    if (event.type == sf::Event::TextEntered) {
+        if (!isTypingName) return;
+
+        const sf::Uint32 code = event.text.unicode;
+
+        if (code >= 32 && code < 127) {
+            char c = static_cast<char> (code);
+
+            if ((c >= '0' && c <= '9') ||
+                (c >= 'A' && c <= 'Z') ||
+                (c >= 'a' && c <= 'z') ||
+                c == '_' || c == '-') {
+
+                if (playerName.size () < 12) {
+                    playerName.push_back (c);
+                }
+            }
+        }
+    }
+}
+
+void GameEngine::saveHighScore () {
+    std::string name = playerName;
+    if (name.empty ()) name = "Anonymous";
+
+    for (char& c : name) {
+        if (c == ' ') c = '_';
+    }
+
+    std::ofstream outFile ("../resources/high_scores.txt", std::ios::app);
+    if (!outFile.is_open ()) {
+        std::cout << "[ERROR] Nie udało się zapisać high score!\n";
+        return;
+    }
+
+    outFile << name << " " << score.getCurrentScore () << "\n";
+    outFile.close ();
+
+    std::cout << "[GameEngine] Saved high score: " << name << " " << score.getCurrentScore () << "\n";
+}
+
+TetrominoType GameEngine::nextFromBag () {
+    if (bagIndex >= 7) {
+        std::shuffle (bag.begin (), bag.end (), rng);
+        bagIndex = 0;
+    }
+
+    return bag[bagIndex++];
+}
 
 void GameEngine::applyTheme (ColorThemeType type) {
     currentThemeType = type;
@@ -1143,4 +1336,6 @@ void GameEngine::applyTheme (ColorThemeType type) {
     board.setTheme (currentTheme);
     score.setTheme (currentTheme);
     mainMenu.setTheme (currentTheme);
+
+    currentTetromino.setTheme (currentTheme);
 }
