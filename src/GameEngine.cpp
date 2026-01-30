@@ -1286,25 +1286,41 @@ void GameEngine::handleControllerButtonMenu(unsigned int button) {
   case 0: // A - Potwierdź
     std::cout << "[Controller Menu] A (confirm)\n";
     sfxMenu.play();
-    handleMenuSelection();
+    
+    // Jeśli jesteśmy w High Scores, cofnij się
+    if (mainMenu.getState() == MenuState::HIGH_SCORES) {
+      mainMenu.setState(MenuState::MAIN_MENU);
+    } else {
+      handleMenuSelection();
+    }
     break;
 
   case 1: // B - Back
     std::cout << "[Controller Menu] B (back)\n";
     sfxMenu.play();
-    if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+    
+    // Obsługa cofania z różnych ekranów
+    if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION ||
+        mainMenu.getState() == MenuState::HIGH_SCORES ||
+        mainMenu.getState() == MenuState::SETTINGS) {
       mainMenu.setState(MenuState::MAIN_MENU);
     } else if (mainMenu.getState() == MenuState::PAUSE) {
       gameState = GameState::Playing;
-      backgroundMusic.play(); // Wznów muzykę przy powrocie do gry
+      backgroundMusic.play();
     }
     break;
 
   case 7: // Start/Menu
     std::cout << "[Controller Menu] Start\n";
-    if (mainMenu.getState() == MenuState::PAUSE) {
+    
+    // Start też powinien cofać z High Scores
+    if (mainMenu.getState() == MenuState::HIGH_SCORES ||
+        mainMenu.getState() == MenuState::SETTINGS) {
+      mainMenu.setState(MenuState::MAIN_MENU);
+      sfxMenu.play();
+    } else if (mainMenu.getState() == MenuState::PAUSE) {
       gameState = GameState::Playing;
-      backgroundMusic.play(); // Wznów muzykę
+      backgroundMusic.play();
     }
     break;
   }
@@ -1323,34 +1339,17 @@ void GameEngine::handleControllerAxisMenu(sf::Joystick::Axis axis,
   const float threshold = 50.0f;
 
   // D-pad góra/dół (PovY) - odwrócone wartości
-  // Lewy joystick (Y) - normalne wartości
   if (axis == sf::Joystick::PovY) {
     // PovY: position > 0 to GÓRA, position < 0 to DÓŁ
     if (position > threshold && !upPressed) {
       std::cout << "[Controller Menu] D-pad UP\n";
-
-      if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-        sf::Event fakeEvent;
-        fakeEvent.type = sf::Event::KeyPressed;
-        fakeEvent.key.code = sf::Keyboard::Up;
-        mainMenu.handleEvent(fakeEvent);
-      } else {
-        mainMenu.moveUp();
-        sfxMenu.play();
-      }
+      mainMenu.moveUp();
+      sfxMenu.play();
       upPressed = true;
     } else if (position < -threshold && !downPressed) {
       std::cout << "[Controller Menu] D-pad DOWN\n";
-
-      if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-        sf::Event fakeEvent;
-        fakeEvent.type = sf::Event::KeyPressed;
-        fakeEvent.key.code = sf::Keyboard::Down;
-        mainMenu.handleEvent(fakeEvent);
-      } else {
-        mainMenu.moveDown();
-        sfxMenu.play();
-      }
+      mainMenu.moveDown();
+      sfxMenu.play();
       downPressed = true;
     } else if (position > -threshold && position < threshold) {
       upPressed = false;
@@ -1360,29 +1359,13 @@ void GameEngine::handleControllerAxisMenu(sf::Joystick::Axis axis,
     // Lewy joystick Y: position < 0 to GÓRA, position > 0 to DÓŁ (normalne)
     if (position < -threshold && !upPressed) {
       std::cout << "[Controller Menu] Joystick UP\n";
-
-      if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-        sf::Event fakeEvent;
-        fakeEvent.type = sf::Event::KeyPressed;
-        fakeEvent.key.code = sf::Keyboard::Up;
-        mainMenu.handleEvent(fakeEvent);
-      } else {
-        mainMenu.moveUp();
-        sfxMenu.play();
-      }
+      mainMenu.moveUp();
+      sfxMenu.play();
       upPressed = true;
     } else if (position > threshold && !downPressed) {
       std::cout << "[Controller Menu] Joystick DOWN\n";
-
-      if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-        sf::Event fakeEvent;
-        fakeEvent.type = sf::Event::KeyPressed;
-        fakeEvent.key.code = sf::Keyboard::Down;
-        mainMenu.handleEvent(fakeEvent);
-      } else {
-        mainMenu.moveDown();
-        sfxMenu.play();
-      }
+      mainMenu.moveDown();
+      sfxMenu.play();
       downPressed = true;
     } else if (position > -threshold && position < threshold) {
       upPressed = false;
@@ -1395,12 +1378,12 @@ void GameEngine::handleControllerAxisMenu(sf::Joystick::Axis axis,
     if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
       if (position < -threshold && !leftPressed) {
         std::cout << "[Controller Menu] LEFT\n";
-        mainMenu.decreaseDifficulty();
+        mainMenu.decreaseDifficulty();  // Zawsze zmień level
         sfxMenu.play();
         leftPressed = true;
       } else if (position > threshold && !rightPressed) {
         std::cout << "[Controller Menu] RIGHT\n";
-        mainMenu.increaseDifficulty();
+        mainMenu.increaseDifficulty();  // Zawsze zmień level
         sfxMenu.play();
         rightPressed = true;
       } else if (position > -threshold && position < threshold) {
