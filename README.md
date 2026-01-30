@@ -142,7 +142,7 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 
 ---
 
-- [ ] Naprawić zapełnianie się planszy
+- [x] Naprawić zapełnianie się planszy
 - [x] Implementacja menu pauzy
 - [x] Implementacja systemu punktacji (100/300/500/800 pkt)
 - [x] Implementacja wyświetlania wyniku (prawy panel)
@@ -160,10 +160,9 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 
 - [x] Implementacja lokalnej tablicy wyników (Top 10)
 - [x] Implementacja statystyk gracza (czas gry, total linii, itp.)
-- [ ] Implementacja konfiguracji sterowania (remapping klawiszy; w pliku)
 
 ---
 
 - [x] Implementacja systemu dźwięków (SFX dla rotacji, drop, line clear)
 - [x] Implementacja muzyki w tle
-- [ ] Implementacja 2-3 motywów kolorystycznych
+- [x] Implementacja 2-3 motywów kolorystycznych

@@ -1,11 +1,15 @@
 #pragma once
 #include "Board.h"
+#include "ColorTheme.h"
 #include "Menu.h"
 #include "Score.h"
 #include "Tetromino.h"
 #include "TetrominoType.h"
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
+#include <algorithm>
+#include <array>
+#include <random>
 #include <vector>
 
 class GameEngine {
@@ -19,7 +23,7 @@ private:
   GameState gameState = GameState::Menu;
   bool isRunning = false;
 
-  // Spadanie klocka
+  // Falling logic
   float fallTimer = 0.0f;
   float fallSpeed = 0.5f;
   float lockTimer = 0.0f;
@@ -106,6 +110,24 @@ private:
 
   void handleGameOverInput(sf::Event &event);
   void saveHighScore();
+
+  std::mt19937 rng{std::random_device{}()};
+
+  // 7-bag (TetrominoType)
+  std::array<TetrominoType, 7> bag = {
+      TetrominoType::I, TetrominoType::O, TetrominoType::T, TetrominoType::S,
+      TetrominoType::Z, TetrominoType::J, TetrominoType::L};
+  int bagIndex = 7; // 7 = empty -> force shuffle
+
+  TetrominoType nextFromBag();
+
+  // Game time (seconds)
+  float gameTimeSec = 0.0f;
+
+  ColorThemeType currentThemeType = ColorThemeType::CLASSIC;
+  ColorTheme currentTheme;
+
+  void applyTheme(ColorThemeType type);
 
 public:
   GameEngine();

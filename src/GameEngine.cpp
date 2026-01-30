@@ -26,13 +26,19 @@ void GameEngine::initialize() {
 
   if (!uiFont.loadFromFile(
           "../resources/fonts/Press_Start_2P/PressStart2P-Regular.ttf")) {
-    std::cout << "[GameEngine ERROR] Nie udało się załadować czcionki UI!\n";
+    std::cout << "[GameEngine ERROR] Nie udalo sie zaladowac czcionki UI!\n";
   }
 
+  // Initial theme
+  applyTheme(ColorThemeType::CLASSIC);
+
+  bagIndex = 7; // Force first shuffle
   nextQueue.clear();
   for (int i = 0; i < 5; i++) {
-    nextQueue.push_back(getRandomTetrominoType());
+    nextQueue.push_back(nextFromBag());
   }
+
+  gameTimeSec = 0.0f;
 
   heldTetrominoType = TetrominoType::Empty;
   hasHeldPiece = false;
@@ -144,40 +150,55 @@ void GameEngine::handleEvents() {
     if (gameState == GameState::Menu) {
       mainMenu.handleEvent(event);
 
-      if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-        if (event.type == sf::Event::MouseButtonPressed &&
-            event.mouseButton.button == sf::Mouse::Left) {
+      if (event.type == sf::Event::KeyPressed) {
+        if (event.key.code == sf::Keyboard::Up) {
+          mainMenu.moveUp();
+          sfxMenu.play();
+        } else if (event.key.code == sf::Keyboard::Down) {
+          mainMenu.moveDown();
+          sfxMenu.play();
+        } else if (event.key.code == sf::Keyboard::Left) {
+          if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+            mainMenu.decreaseDifficulty();
+            sfxMenu.play();
+          }
+        } else if (event.key.code == sf::Keyboard::Right) {
+          if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+            mainMenu.increaseDifficulty();
+            sfxMenu.play();
+          }
+        } else if (event.key.code == sf::Keyboard::Escape) {
+          if (mainMenu.getState() == MenuState::HIGH_SCORES ||
+              mainMenu.getState() == MenuState::SETTINGS ||
+              mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+            mainMenu.setState(MenuState::MAIN_MENU);
+            sfxMenu.play();
+          }
+        } else if (event.key.code == sf::Keyboard::Enter) {
+          if (mainMenu.getState() == MenuState::HIGH_SCORES) {
+            mainMenu.setState(MenuState::MAIN_MENU);
+          } else {
+            handleMenuSelection();
+          }
+          sfxMenu.play();
+        }
+      }
 
+      if (event.type == sf::Event::MouseButtonPressed &&
+          event.mouseButton.button == sf::Mouse::Left) {
+        if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
           int clickResult = mainMenu.checkDifficultyClick(
               static_cast<float>(event.mouseButton.x),
               static_cast<float>(event.mouseButton.y));
-
           if (clickResult == 1) {
-            std::cout << "[Menu] Click -> Confirm\n";
             handleMenuSelection();
           } else if (clickResult == 2) {
-            std::cout << "[Menu] Click -> Back\n";
             mainMenu.setState(MenuState::MAIN_MENU);
           }
-        }
-
-        if (event.type == sf::Event::KeyPressed &&
-            event.key.code == sf::Keyboard::Enter) {
-          std::cout << "[Menu] Enter -> Confirm\n";
+        } else {
           handleMenuSelection();
         }
-      } else {
-        if (event.type == sf::Event::KeyPressed &&
-            event.key.code == sf::Keyboard::Enter) {
-          std::cout << "[Menu] Enter -> Select\n";
-          handleMenuSelection();
-        }
-
-        if (event.type == sf::Event::MouseButtonPressed &&
-            event.mouseButton.button == sf::Mouse::Left) {
-          std::cout << "[Menu] Mouse click -> Select\n";
-          handleMenuSelection();
-        }
+        sfxMenu.play();
       }
 
       continue;
@@ -210,6 +231,8 @@ void GameEngine::handleEvents() {
 }
 
 void GameEngine::update(float deltaTime) {
+  gameTimeSec += deltaTime;
+  score.setGameTimeSeconds(gameTimeSec);
   // Ciągłe sprawdzanie D-pada dla soft drop (kontroler)
   if (sf::Joystick::isConnected(0)) {
     float povY = sf::Joystick::getAxisPosition(0, sf::Joystick::PovY);
@@ -338,7 +361,7 @@ void GameEngine::update(float deltaTime) {
 }
 
 void GameEngine::render() {
-  window.clear(sf::Color::White);
+  window.clear(currentTheme.background);
 
   if (gameState == GameState::Menu) {
     mainMenu.render(window);
@@ -412,9 +435,9 @@ void GameEngine::spawnNewTetromino() {
   std::cout << "[GameEngine] Spawned type=" << static_cast<int>(nextQueue[0])
             << "\n";
 
-  // Przesuń kolejkę i dodaj nowy na końcu
+  // Przesun kolejke i dodaj nowy na koncu
   nextQueue.erase(nextQueue.begin());
-  nextQueue.push_back(getRandomTetrominoType());
+  nextQueue.push_back(nextFromBag());
 
   canHold = true;
 
@@ -506,9 +529,20 @@ void GameEngine::handleMenuSelection() {
 
   case MenuAction::HIGH_SCORES:
     std::cout << "[Menu] -> High Scores\n";
-    // TODO: Przejdź do ekranu High Scores
-    // Na razie tylko wyświetl komunikat
-    std::cout << "[Menu] High Scores - not implemented yet\n";
+    {
+      std::vector<std::pair<std::string, int>> highScores;
+      std::ifstream inFile("../resources/high_scores.txt");
+      if (inFile.is_open()) {
+        std::string name;
+        int scoreVal;
+        while (inFile >> name >> scoreVal) {
+          highScores.push_back({name, scoreVal});
+        }
+        inFile.close();
+      }
+      mainMenu.setHighScores(highScores);
+    }
+    mainMenu.setState(MenuState::HIGH_SCORES);
     break;
 
   case MenuAction::SETTINGS:
@@ -537,8 +571,10 @@ void GameEngine::handleMenuSelection() {
 
     nextQueue.clear();
     for (int i = 0; i < 5; i++) {
-      nextQueue.push_back(getRandomTetrominoType());
+      nextQueue.push_back(nextFromBag());
     }
+    gameTimeSec = 0.0f;
+    score.setGameTimeSeconds(0.0f);
     heldTetrominoType = TetrominoType::Empty;
     hasHeldPiece = false;
     canHold = true;
@@ -575,6 +611,16 @@ void GameEngine::handleMenuSelection() {
     std::cout << "[Menu] Exit\n";
     backgroundMusic.stop(); // 🛑 zatrzymujemy muzykę
     window.close();         // ❌ zamykamy okno
+    break;
+
+  case MenuAction::CHANGE_THEME:
+    std::cout << "[Menu] Change theme\n";
+    if (mainMenu.getSelectedTheme() == 0)
+      applyTheme(ColorThemeType::CLASSIC);
+    else if (mainMenu.getSelectedTheme() == 1)
+      applyTheme(ColorThemeType::DARK);
+    else if (mainMenu.getSelectedTheme() == 2)
+      applyTheme(ColorThemeType::NEON);
     break;
 
   default:
@@ -1099,16 +1145,16 @@ void GameEngine::renderHeldPiece(sf::RenderWindow &window) const {
 
   sf::RectangleShape panel(sf::Vector2f(150, 140));
   panel.setPosition(leftMargin, 170); // Aligned with board top
-  panel.setFillColor(sf::Color(50, 50, 50));
+  panel.setFillColor(currentTheme.panel);
   panel.setOutlineThickness(2);
-  panel.setOutlineColor(sf::Color::White);
+  panel.setOutlineColor(currentTheme.text);
   window.draw(panel);
 
   sf::Text titleText;
   titleText.setFont(uiFont);
   titleText.setString("HOLD");
   titleText.setCharacterSize(20);
-  titleText.setFillColor(sf::Color::Magenta);
+  titleText.setFillColor(currentTheme.highlight);
   titleText.setPosition(leftMargin + 20, 180);
   window.draw(titleText);
 
@@ -1138,16 +1184,16 @@ void GameEngine::renderNextPiece(sf::RenderWindow &window) const {
 
   sf::RectangleShape panel(sf::Vector2f(150, panelHeight));
   panel.setPosition(leftMargin, topPosition);
-  panel.setFillColor(sf::Color(50, 50, 50));
+  panel.setFillColor(currentTheme.panel);
   panel.setOutlineThickness(2);
-  panel.setOutlineColor(sf::Color::White);
+  panel.setOutlineColor(currentTheme.text);
   window.draw(panel);
 
   sf::Text titleText;
   titleText.setFont(uiFont);
   titleText.setString("NEXT");
   titleText.setCharacterSize(20);
-  titleText.setFillColor(sf::Color::Green);
+  titleText.setFillColor(currentTheme.highlight);
   titleText.setPosition(leftMargin + 20, topPosition + 10);
   window.draw(titleText);
 
@@ -1349,17 +1395,13 @@ void GameEngine::handleControllerAxisMenu(sf::Joystick::Axis axis,
     if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
       if (position < -threshold && !leftPressed) {
         std::cout << "[Controller Menu] LEFT\n";
-        sf::Event fakeEvent;
-        fakeEvent.type = sf::Event::KeyPressed;
-        fakeEvent.key.code = sf::Keyboard::Left;
-        mainMenu.handleEvent(fakeEvent);
+        mainMenu.decreaseDifficulty();
+        sfxMenu.play();
         leftPressed = true;
       } else if (position > threshold && !rightPressed) {
         std::cout << "[Controller Menu] RIGHT\n";
-        sf::Event fakeEvent;
-        fakeEvent.type = sf::Event::KeyPressed;
-        fakeEvent.key.code = sf::Keyboard::Right;
-        mainMenu.handleEvent(fakeEvent);
+        mainMenu.increaseDifficulty();
+        sfxMenu.play();
         rightPressed = true;
       } else if (position > -threshold && position < threshold) {
         leftPressed = false;
@@ -1532,4 +1574,32 @@ void GameEngine::saveHighScore() {
   } else {
     std::cout << "[GameEngine ERROR] Failed to save high scores\n";
   }
+}
+
+TetrominoType GameEngine::nextFromBag() {
+  if (bagIndex >= 7) {
+    std::shuffle(bag.begin(), bag.end(), rng);
+    bagIndex = 0;
+  }
+  return bag[bagIndex++];
+}
+
+void GameEngine::applyTheme(ColorThemeType type) {
+  currentThemeType = type;
+  switch (type) {
+  case ColorThemeType::CLASSIC:
+    currentTheme = CLASSIC_THEME;
+    break;
+  case ColorThemeType::DARK:
+    currentTheme = DARK_THEME;
+    break;
+  case ColorThemeType::NEON:
+    currentTheme = NEON_THEME;
+    break;
+  }
+
+  board.setTheme(currentTheme);
+  score.setTheme(currentTheme);
+  mainMenu.setTheme(currentTheme);
+  currentTetromino.setTheme(currentTheme);
 }

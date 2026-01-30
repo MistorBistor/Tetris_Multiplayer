@@ -1,62 +1,42 @@
 #include "Board.h"
+#include "Tetromino.h"
 #include <algorithm>
 #include <iostream>
 
+Board::Board()
+    : isClearing(false), clearTimer(0.0f), blinkOn(true),
+      grid(ROWS, std::vector<TetrominoType>(COLS, TetrominoType::Empty)) {
+  reset();
+}
+
 /**
- * Zwraca kolor na podstawie typu klocka.
- * Używamy tych samych kolorów co w Tetromino.
+ * Rysowanie planszy.
+ * Iterujemy przez siatkę i rysujemy każdy zajęty (niezerowy) kwadrat.
  */
-sf::Color getColorForType(TetrominoType type) {
-  switch (type) {
-  case TetrominoType::I:
-    return sf::Color::Cyan;
-  case TetrominoType::O:
-    return sf::Color::Yellow;
-  case TetrominoType::T:
-    return sf::Color::Magenta;
-  case TetrominoType::S:
-    return sf::Color::Green;
-  case TetrominoType::Z:
-    return sf::Color::Red;
-  case TetrominoType::J:
-    return sf::Color::Blue;
-  case TetrominoType::L:
-    return sf::Color(255, 165, 0); // Orange
-  default:
-    return sf::Color::White; // Empty lub nieznany
-  }
-}
-
-// Offset oznacza pozycję planszy (Board) w oknie, czyli margines boczny
-Board::Board() : offsetX(270), offsetY(170) {
-  grid.resize(ROWS, std::vector<TetrominoType>(COLS, TetrominoType::Empty));
-}
-
 void Board::render(sf::RenderWindow &window) {
   sf::RectangleShape cell(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
 
-  for (int row = 0; row < ROWS; row++) {
-    // 🔥 Czy ten wiersz jest aktualnie czyszczony?
-    bool rowClearing =
-        isClearing && (std::find(clearingRows.begin(), clearingRows.end(),
-                                 row) != clearingRows.end());
+  // Offset dla planszy w oknie
+  const int offsetX = 270;
+  const int offsetY = 170;
 
+  for (int row = 0; row < ROWS; row++) {
     for (int col = 0; col < COLS; col++) {
-      // Adjust Y position by subtracting HIDDEN_ROWS from row index
       cell.setPosition(offsetX + col * CELL_SIZE,
                        offsetY + (row - HIDDEN_ROWS) * CELL_SIZE);
 
-      // ANIMACJA CZYSZCZENIA LINII
-      if (rowClearing) {
+      // Jeśli trwa animacja usuwania linii
+      if (isClearing && std::find(clearingRows.begin(), clearingRows.end(),
+                                  row) != clearingRows.end()) {
         if (blinkOn) {
-          // "rozbłysk" – jasny kolor
-          cell.setFillColor(sf::Color::Black); // możesz zmienić na White
+          // Błysk - biały
+          cell.setFillColor(sf::Color::White);
           cell.setOutlineThickness(0);
         } else {
-          // "zgaśnięcie" – wygląda jak pusta
-          cell.setFillColor(sf::Color::White);
+          // "zgaśnięcie" – wygląda jak pusta (używamy koloru tła z motywu)
+          cell.setFillColor(currentTheme.background);
           cell.setOutlineThickness(1);
-          cell.setOutlineColor(sf::Color::Black);
+          cell.setOutlineColor(currentTheme.panel);
         }
 
         window.draw(cell);
@@ -67,9 +47,9 @@ void Board::render(sf::RenderWindow &window) {
       if (grid[row][col] == TetrominoType::Empty) {
         // Jeśli pusty, rysujemy tylko jeśli NIE jest w ukrytym obszarze
         if (row >= HIDDEN_ROWS) {
-          cell.setFillColor(sf::Color::White);
+          cell.setFillColor(currentTheme.background);
           cell.setOutlineThickness(1);
-          cell.setOutlineColor(sf::Color::Black);
+          cell.setOutlineColor(currentTheme.panel);
           window.draw(cell);
         }
       } else {
@@ -99,7 +79,7 @@ bool Board::isValidPosition(int x, int y) const {
 
 /**
  * Blokowanie klocka na planszy oznacza ustawienie odpowiednich komórek w
- * siatce na 1.
+ * siatce na typ klocka.
  */
 void Board::lockTetromino(int x, int y,
                           const std::vector<std::vector<int>> &shape,
@@ -122,8 +102,6 @@ void Board::lockTetromino(int x, int y,
 }
 /**
  * Sprawdza czy cały klocek może być umieszczony w danej pozycji.
- * Iteruje przez wszystkie wypełnione komórki klocka (wartość 1)
- * i sprawdza czy każda z nich jest w prawidłowej pozycji.
  */
 bool Board::canPlaceTetromino(
     int x, int y, const std::vector<std::vector<int>> &shape) const {
@@ -135,15 +113,11 @@ bool Board::canPlaceTetromino(
 
         // Sprawdź czy nie wychodzi poza planszę (lewo, prawo, dół)
         if (boardX < 0 || boardX >= COLS || boardY >= ROWS) {
-          std::cout << "[Board] Kolizja: poza planszą (" << boardX << ", "
-                    << boardY << ")\n";
           return false;
         }
 
         // Pozwalamy na pozycje powyżej planszy (podczas spawnu)
         if (boardY >= 0 && grid[boardY][boardX] != TetrominoType::Empty) {
-          std::cout << "[Board] Kolizja: zajęta komórka (" << boardX << ", "
-                    << boardY << ")\n";
           return false;
         }
       }
@@ -154,7 +128,6 @@ bool Board::canPlaceTetromino(
 
 /**
  * Sprawdza czy dana linia jest cała wypełniona.
- * Linia jest pełna gdy wszystkie komórki (0 do COLS - 1) są zajęte (!= 0).
  */
 bool Board::isLineFull(int row) const {
   for (int col = 0; col < COLS; col++) {
@@ -184,21 +157,17 @@ void Board::removeLine(int row) {
 
 /**
  * Wykrywa wszystkie pełne linie, usuwa je i zwraca ich liczbę.
- * Sprawdzamy od dołu do góry, bo po usunięciu linii bloki opadają.
  */
 int Board::clearFullLines() {
   int clearedLines = 0;
 
-  // Sprawdzamy od dołu do góry (ROWS-1 do 0)
+  // Sprawdzamy od dołu do góry
   int row = ROWS - 1;
   while (row >= 0) {
     if (isLineFull(row)) {
       removeLine(row);
       clearedLines++;
-      // Nie zmniejszamy row, bo po usunięciu linia powyżej "spadła" na to
-      // miejsce i musimy ją też sprawdzić
     } else {
-      // Linia nie jest pełna, przechodzimy do następnej (wyżej)
       row--;
     }
   }
@@ -212,7 +181,7 @@ bool Board::startClearAnimation() {
 
   clearingRows.clear();
 
-  // Szukamy pełnych linii OD DOŁU (ważne!)
+  // Szukamy pełnych linii OD DOŁU
   for (int y = ROWS - 1; y >= 0; y--) {
     bool full = true;
 
@@ -259,7 +228,6 @@ int Board::updateClearAnimation(float dt) {
 
   // Koniec animacji -> usuwamy linie
   if (blinkCount >= maxBlinks) {
-    // Usuwamy od góry do dołu (rosnąco), żeby removeLine nie rozjechał indeksów
     std::sort(clearingRows.begin(), clearingRows.end());
 
     int removed = (int)clearingRows.size();
@@ -281,27 +249,20 @@ int Board::updateClearAnimation(float dt) {
 bool Board::isLineClearAnimating() const { return isClearing; }
 
 /**
- * Resetuje planszę do stanu początkowego - wszystkie komórki puste.
+ * Resetuje planszę do stanu początkowego.
  */
 void Board::reset() {
-  // Zerujemy całą siatkę
   for (int row = 0; row < ROWS; row++) {
     for (int col = 0; col < COLS; col++) {
       grid[row][col] = TetrominoType::Empty;
     }
   }
-
-  std::cout << "[Board] Reset planszy - wszystkie komórki ustawione na Empty\n";
+  std::cout << "[Board] Reset planszy\n";
 }
 
 void Board::updateClearAnimSpeed(int level) {
-  // bazowy interwał (na niskim levelu)
   const float baseInterval = 0.10f;
-
-  // jak szybko przyspieszamy z levelem
   const float intervalPerLevel = 0.004f;
-
-  // minimalny interwał (żeby nie było epilepsji i nie zniknęło "instant")
   const float minInterval = 0.04f;
 
   float interval = baseInterval - level * intervalPerLevel;
@@ -309,8 +270,27 @@ void Board::updateClearAnimSpeed(int level) {
     interval = minInterval;
 
   blinkInterval = interval;
+}
 
-  // maxBlinks zostawiamy stałe (np. 6), żeby nadal było 2-3 mrugnięcia
-  // jeśli chcesz, możesz też delikatnie skracać liczbę blinków:
-  // maxBlinks = std::max(4, 6 - level / 5);
+void Board::setTheme(const ColorTheme &theme) { currentTheme = theme; }
+
+sf::Color Board::getColorForType(TetrominoType type) {
+  switch (type) {
+  case TetrominoType::I:
+    return currentTheme.I;
+  case TetrominoType::O:
+    return currentTheme.O;
+  case TetrominoType::T:
+    return currentTheme.T;
+  case TetrominoType::S:
+    return currentTheme.S;
+  case TetrominoType::Z:
+    return currentTheme.Z;
+  case TetrominoType::J:
+    return currentTheme.J;
+  case TetrominoType::L:
+    return currentTheme.L;
+  default:
+    return sf::Color::Transparent;
+  }
 }

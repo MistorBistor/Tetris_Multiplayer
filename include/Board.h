@@ -1,4 +1,5 @@
 #pragma once
+#include "ColorTheme.h"
 #include "TetrominoType.h"
 #include <SFML/Graphics.hpp>
 #include <vector>
@@ -25,6 +26,8 @@ private:
   int maxBlinks = 6; // 6 zmian = ok. 3 „mrugnięcia”
   bool blinkOn = false;
 
+  ColorTheme currentTheme;
+
 public:
   static const int HIDDEN_ROWS = 4;
   Board(); // konstruktor
@@ -47,4 +50,8 @@ public:
   void updateClearAnimSpeed(int level);
 
   void reset();
+  void setTheme(const ColorTheme &theme);
+
+private:
+  sf::Color getColorForType(TetrominoType type);
 };

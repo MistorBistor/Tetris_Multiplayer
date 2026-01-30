@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <iostream>
 
+extern ColorTheme CLASSIC_THEME;
+
 Tetromino::Tetromino(TetrominoType tetrominoType)
-    : x(3), y(1), type(tetrominoType) { // ← To jest OTWARCIE {
+    : x(3), y(1), type(tetrominoType) {
 
   // Fix: I piece spawns too low at y=1 because of its shape definition
   if (type == TetrominoType::I) {
@@ -14,56 +16,81 @@ Tetromino::Tetromino(TetrominoType tetrominoType)
   std::cout << "[Tetromino] Tworzenie klocka typu: " << static_cast<int>(type)
             << '\n';
 
+  // domyślny motyw
+  currentTheme = CLASSIC_THEME;
+
   switch (type) {
-  case TetrominoType::I: // Cyan - linia pionowa
-    color = sf::Color::Cyan;
+  case TetrominoType::I:
     shape = {{0, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 0}, {0, 1, 0, 0}};
     break;
-
-  case TetrominoType::O: // Yellow - kwadrat
-    color = sf::Color::Yellow;
+  case TetrominoType::O:
     shape = {{0, 0, 0, 0}, {0, 1, 1, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}};
     break;
-
-  case TetrominoType::T: // Magenta - T-shape
-    color = sf::Color::Magenta;
+  case TetrominoType::T:
     shape = {{0, 0, 0, 0}, {0, 1, 1, 1}, {0, 0, 1, 0}, {0, 0, 0, 0}};
     break;
-
-  case TetrominoType::S: // Green - S-shape
-    color = sf::Color::Green;
+  case TetrominoType::S:
     shape = {{0, 0, 0, 0}, {0, 0, 1, 1}, {0, 1, 1, 0}, {0, 0, 0, 0}};
     break;
-
-  case TetrominoType::Z: // Red - Z-shape
-    color = sf::Color::Red;
+  case TetrominoType::Z:
     shape = {{0, 0, 0, 0}, {0, 1, 1, 0}, {0, 0, 1, 1}, {0, 0, 0, 0}};
     break;
-
-  case TetrominoType::J: // Blue - J-shape
-    color = sf::Color::Blue;
+  case TetrominoType::J:
     shape = {{0, 0, 0, 0}, {0, 1, 1, 1}, {0, 0, 0, 1}, {0, 0, 0, 0}};
     break;
-
-  case TetrominoType::L:            // Orange - L-shape
-    color = sf::Color(255, 165, 0); // RGB dla pomarańczowego
+  case TetrominoType::L:
     shape = {{0, 0, 0, 0}, {0, 1, 1, 1}, {0, 1, 0, 0}, {0, 0, 0, 0}};
     break;
+  default:
+    shape = {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}};
+    break;
   }
-} // ← A to jest ZAMKNIĘCIE }
+
+  updateColorFromTheme();
+}
+
+void Tetromino::setTheme(const ColorTheme &theme) {
+  currentTheme = theme;
+  updateColorFromTheme();
+}
+
+void Tetromino::updateColorFromTheme() {
+  switch (type) {
+  case TetrominoType::I:
+    color = currentTheme.I;
+    break;
+  case TetrominoType::O:
+    color = currentTheme.O;
+    break;
+  case TetrominoType::T:
+    color = currentTheme.T;
+    break;
+  case TetrominoType::S:
+    color = currentTheme.S;
+    break;
+  case TetrominoType::Z:
+    color = currentTheme.Z;
+    break;
+  case TetrominoType::J:
+    color = currentTheme.J;
+    break;
+  case TetrominoType::L:
+    color = currentTheme.L;
+    break;
+  default:
+    color = currentTheme.text;
+    break;
+  }
+}
 
 void Tetromino::render(sf::RenderWindow &window) {
   sf::RectangleShape block(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
-
   block.setFillColor(color);
 
-  // Tutaj rysujemy tylko te części klocka, które są wypełnione (wartość 1)
   for (int row = 0; row < 4; row++) {
     for (int col = 0; col < 4; col++) {
       if (shape[row][col] == 1) {
         int boardY = y + row;
-
-        // Always draw the block, even if in HIDDEN_ROWS area
         // Position is offset by HIDDEN_ROWS so it appears above the board
         block.setPosition(offsetX + (x + col) * CELL_SIZE,
                           offsetY + (boardY - Board::HIDDEN_ROWS) * CELL_SIZE);
@@ -73,65 +100,11 @@ void Tetromino::render(sf::RenderWindow &window) {
   }
 }
 
-void Tetromino::moveDown() { y++; }
-
-void Tetromino::moveUp() { y--; }
-
-/**
- * Przesuwa klocek o jedną pozycję w lewo.
- * Zmniejsza współrzędną x o 1.
- */
-void Tetromino::moveLeft() {
-  x--;
-  std::cout << "[Tetromino] Ruch w lewo: x = " << x << '\n';
-}
-
-/**
- * Przesuwa klocek o jedną pozycję w prawo.
- * Zwiększa współrzędną x o 1.
- */
-void Tetromino::moveRight() {
-  x++;
-  std::cout << "[Tetromino] Ruch w prawo: x = " << x << '\n';
-}
-
-/**
- * Obraca klocek o 90 stopni w prawo (zgodnie z ruchem wskazówek zegara).
- * Algorytm:
- * 1. Transponowanie macierzy (zamiana wierszy z kolumnami)
- * 2. Odwrócenie każdego wiersza
- */
-void Tetromino::rotate() {
-  std::cout << "[Tetromino] Rotacja klocka\n";
-
-  // Tworzymy nową macierz 4x4 dla wyniku rotacji
-  std::vector<std::vector<int>> rotatedShape(4, std::vector<int>(4, 0));
-
-  // Krok 1: Transponowanie - zamiana shape[row][col] na rotatedShape[col][row]
-  for (int row = 0; row < 4; row++) {
-    for (int col = 0; col < 4; col++) {
-      rotatedShape[col][row] = shape[row][col];
-    }
-  }
-
-  // Krok 2: Odwrócenie każdego wiersza (lewo-prawo)
-  for (int row = 0; row < 4; row++) {
-    std::reverse(rotatedShape[row].begin(), rotatedShape[row].end());
-  }
-
-  // Zastąp stary kształt nowym
-  shape = rotatedShape;
-}
-
 void Tetromino::renderGhost(sf::RenderWindow &window) {
-  // (nie zmieniamy logiki kształtu, tylko kolor)
-
   sf::RectangleShape block(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
 
-  // półprzezroczysty (alpha np. 80)
   sf::Color ghostColor = color;
   ghostColor.a = 60;
-
   block.setFillColor(ghostColor);
   block.setOutlineThickness(0);
 
@@ -139,12 +112,34 @@ void Tetromino::renderGhost(sf::RenderWindow &window) {
     for (int col = 0; col < 4; col++) {
       if (shape[row][col] == 1) {
         int boardY = y + row;
-
         block.setPosition(offsetX + (x + col) * CELL_SIZE,
                           offsetY + (boardY - Board::HIDDEN_ROWS) * CELL_SIZE);
-
         window.draw(block);
       }
     }
   }
+}
+
+void Tetromino::moveDown() { y++; }
+void Tetromino::moveUp() { y--; }
+
+void Tetromino::moveLeft() { x--; }
+
+void Tetromino::moveRight() { x++; }
+
+void Tetromino::rotate() {
+  std::vector<std::vector<int>> rotatedShape(4, std::vector<int>(4, 0));
+
+  for (int row = 0; row < 4; row++) {
+    for (int col = 0; col < 4; col++) {
+      rotatedShape[col][row] = shape[row][col];
+    }
+  }
+
+  for (int row = 0; row < 4; row++) {
+    std::reverse(rotatedShape[row].begin(), rotatedShape[row].end());
+  }
+
+  shape = rotatedShape;
+  updateColorFromTheme();
 }

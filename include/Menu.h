@@ -1,6 +1,7 @@
 #ifndef MENU_HPP
 #define MENU_HPP
 
+#include "ColorTheme.h"
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 #include <string>
@@ -12,11 +13,12 @@
  */
 enum class MenuState {
   MAIN_MENU,
+  HIGH_SCORES,
   GAME,
   PAUSE,
   GAME_OVER,
   SETTINGS,
-  DIFFICULTY_SELECTION
+  DIFFICULTY_SELECTION,
 };
 /**
  * @enum MenuAction
@@ -32,7 +34,8 @@ enum class MenuAction {
   EXIT,
   RESUME,
   RESTART,
-  MAIN_MENU
+  MAIN_MENU,
+  CHANGE_THEME
 };
 /**
  * @class Menu
@@ -63,15 +66,18 @@ private:
   sf::Text backButton;
 
   static const int WINDOW_WIDTH = 800;
-  static const int WINDOW_HEIGHT = 700;
+  static const int WINDOW_HEIGHT = 850; // Zwiększone dla wyższego okna
   static const int TITLE_SIZE = 60;
   static const int ITEM_SIZE = 30;
   static const int ITEM_SPACING = 50;
 
   void updateDifficultyDisplay();
 
-  // TODO: Dodać czcionki, teksty i obiekty graficzne SFML
-  // TODO: Dodać tło menu
+  std::vector<std::pair<std::string, int>> highScores;
+
+  int selectedTheme = 0; // 0 = Classic, 1 = Dark, 2 = Neon
+
+  ColorTheme currentTheme;
 
 public:
   /**
@@ -86,14 +92,12 @@ public:
 
   /**
    * @brief Inicjalizacja menu
-   * TODO: Załadować czcionki, utworzyć elementy menu
    */
   void initialize();
 
   /**
    * @brief Ustawienie stanu menu
    * @param state Nowy stan menu
-   * TODO: Zmienić elementy menu w zależności od stanu
    */
   void setState(MenuState state);
 
@@ -104,13 +108,11 @@ public:
 
   /**
    * @brief Przesunięcie wyboru w górę
-   * TODO: Zmienić selectedIndex z uwzględnieniem zawijania
    */
   void moveUp();
 
   /**
    * @brief Przesunięcie wyboru w dół
-   * TODO: Zmienić selectedIndex z uwzględnieniem zawijania
    */
   void moveDown();
 
@@ -122,24 +124,22 @@ public:
   /**
    * @brief Obsługa wyboru opcji menu
    * @return Akcja do wykonania (jako enum lub int)
-   * TODO: Zwrócić akcję odpowiadającą wybranej opcji (start gry, wyjście, itd.)
    */
   MenuAction handleSelection();
 
   /**
    * @brief Obsługa zdarzeń menu
    * @param event Zdarzenie SFML
-   * TODO: Obsłużyć klawisze strzałek i Enter
    */
   void handleEvent(const sf::Event &event);
 
-  // Zwiększa wybrany poziom trudności (z zawijaniem 5->1)
+  // Zwiększa wybrany poziom trudności
   void increaseDifficulty();
 
-  // Zmniejsza wybrany poziom trudności (z zawijaniem 1->5)
+  // Zmniejsza wybrany poziom trudności
   void decreaseDifficulty();
 
-  // Zwraca wybrany poziom trudności (1-5)
+  // Zwraca wybrany poziom trudności
   int getSelectedDifficulty() const { return selectedDifficulty; }
 
   // Konwertuje poziom trudności na prędkość spadania
@@ -152,7 +152,6 @@ public:
   /**
    * @brief Renderowanie menu
    * @param window Okno do rysowania
-   * TODO: Narysować tło, tytuł i opcje menu z podświetleniem wybranej opcji
    */
   void render(sf::RenderWindow &window) const;
 
@@ -160,11 +159,18 @@ public:
    * @brief Wyświetlenie ekranu Game Over z wynikiem
    * @param score Końcowy wynik
    * @param isHighScore Czy to nowy rekord
-   * TODO: Wyświetlić informacje o końcu gry i statystyki
    */
   void showGameOver(int score, bool isHighScore);
 
   const sf::Font &getFont() const { return font; }
+
+  void setHighScores(const std::vector<std::pair<std::string, int>> &scores) {
+    highScores = scores;
+  }
+
+  int getSelectedTheme() const { return selectedTheme; }
+
+  void setTheme(const ColorTheme &theme);
 };
 
 #endif // MENU_HPP
