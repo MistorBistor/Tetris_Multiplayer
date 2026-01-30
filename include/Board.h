@@ -5,7 +5,7 @@
 
 class Board {
 private:
-  static const int ROWS = 20;
+  static const int ROWS = 24;
   static const int COLS = 10;
   static const int CELL_SIZE = 30;
 
@@ -26,6 +26,7 @@ private:
   bool blinkOn = false;
 
 public:
+  static const int HIDDEN_ROWS = 4;
   Board(); // konstruktor
   void render(sf::RenderWindow &window);
   bool isValidPosition(int x, int y) const;

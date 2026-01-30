@@ -28,7 +28,7 @@ sf::Color getColorForType(TetrominoType type) {
 }
 
 // Offset oznacza pozycję planszy (Board) w oknie, czyli margines boczny
-Board::Board() : offsetX(270), offsetY(50) {
+Board::Board() : offsetX(270), offsetY(170) {
   grid.resize(ROWS, std::vector<TetrominoType>(COLS, TetrominoType::Empty));
 }
 
@@ -36,14 +36,15 @@ void Board::render(sf::RenderWindow &window) {
   sf::RectangleShape cell(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
 
   for (int row = 0; row < ROWS; row++) {
-
     // 🔥 Czy ten wiersz jest aktualnie czyszczony?
     bool rowClearing =
         isClearing && (std::find(clearingRows.begin(), clearingRows.end(),
                                  row) != clearingRows.end());
 
     for (int col = 0; col < COLS; col++) {
-      cell.setPosition(offsetX + col * CELL_SIZE, offsetY + row * CELL_SIZE);
+      // Adjust Y position by subtracting HIDDEN_ROWS from row index
+      cell.setPosition(offsetX + col * CELL_SIZE,
+                       offsetY + (row - HIDDEN_ROWS) * CELL_SIZE);
 
       // ANIMACJA CZYSZCZENIA LINII
       if (rowClearing) {
@@ -62,17 +63,21 @@ void Board::render(sf::RenderWindow &window) {
         continue; // ❗ NIE rysujemy normalnej logiki
       }
 
-      // NORMALNE RYSOWANIE (jak było wcześniej)
+      // NORMALNE RYSOWANIE
       if (grid[row][col] == TetrominoType::Empty) {
-        cell.setFillColor(sf::Color::White);
-        cell.setOutlineThickness(1);
-        cell.setOutlineColor(sf::Color::Black);
+        // Jeśli pusty, rysujemy tylko jeśli NIE jest w ukrytym obszarze
+        if (row >= HIDDEN_ROWS) {
+          cell.setFillColor(sf::Color::White);
+          cell.setOutlineThickness(1);
+          cell.setOutlineColor(sf::Color::Black);
+          window.draw(cell);
+        }
       } else {
+        // Jeśli zajęty, rysujemy ZAWSZE (nawet w ukrytym obszarze)
         cell.setFillColor(getColorForType(grid[row][col]));
         cell.setOutlineThickness(0);
+        window.draw(cell);
       }
-
-      window.draw(cell);
     }
   }
 }

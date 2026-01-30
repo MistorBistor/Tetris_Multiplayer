@@ -156,7 +156,7 @@ void Score::render(sf::RenderWindow &window) const {
   float scoreX = 590; // 20px od końca siatki
 
   sf::RectangleShape scorePanel(sf::Vector2f(panelWidth, 100));
-  scorePanel.setPosition(scoreX, 50);
+  scorePanel.setPosition(scoreX, 170); // Aligned with board top
   scorePanel.setFillColor(sf::Color(50, 50, 50));
   scorePanel.setOutlineThickness(2);
   scorePanel.setOutlineColor(sf::Color::White);
@@ -167,7 +167,7 @@ void Score::render(sf::RenderWindow &window) const {
   scoreTitle.setString("SCORE");
   scoreTitle.setCharacterSize(20);
   scoreTitle.setFillColor(sf::Color::Yellow);
-  scoreTitle.setPosition(scoreX + 20, 60);
+  scoreTitle.setPosition(scoreX + 20, 180);
   window.draw(scoreTitle);
 
   sf::Text scoreValue;
@@ -175,13 +175,13 @@ void Score::render(sf::RenderWindow &window) const {
   scoreValue.setString(std::to_string(currentScore));
   scoreValue.setCharacterSize(24);
   scoreValue.setFillColor(sf::Color::White);
-  scoreValue.setPosition(scoreX + 20, 95);
+  scoreValue.setPosition(scoreX + 20, 215);
   window.draw(scoreValue);
 
   // PANEL LEVEL - na dole, wyrównany z dołem siatki
-  // Siatka kończy się na y=650 (y=50 + 20*30)
+  // Siatka kończy się na y=770 (y=170 + 20*30)
   sf::RectangleShape levelPanel(sf::Vector2f(panelWidth, 80));
-  levelPanel.setPosition(scoreX, 570); // 650 - 80 = 570
+  levelPanel.setPosition(scoreX, 690); // 770 - 80 = 690
   levelPanel.setFillColor(sf::Color(50, 50, 50));
   levelPanel.setOutlineThickness(2);
   levelPanel.setOutlineColor(sf::Color::White);
@@ -192,7 +192,7 @@ void Score::render(sf::RenderWindow &window) const {
   levelTitle.setString("LEVEL");
   levelTitle.setCharacterSize(20);
   levelTitle.setFillColor(sf::Color::Cyan);
-  levelTitle.setPosition(scoreX + 20, 580);
+  levelTitle.setPosition(scoreX + 20, 700);
   window.draw(levelTitle);
 
   sf::Text levelValue;
@@ -200,7 +200,7 @@ void Score::render(sf::RenderWindow &window) const {
   levelValue.setString(std::to_string(level));
   levelValue.setCharacterSize(24);
   levelValue.setFillColor(sf::Color::White);
-  levelValue.setPosition(scoreX + 20, 610);
+  levelValue.setPosition(scoreX + 20, 730);
   window.draw(levelValue);
 
   // PANEL COMBO - nad siatką (wyśrodkowany)

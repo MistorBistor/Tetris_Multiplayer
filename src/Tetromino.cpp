@@ -1,9 +1,15 @@
 #include "Tetromino.h"
+#include "Board.h"
 #include <algorithm>
 #include <iostream>
 
 Tetromino::Tetromino(TetrominoType tetrominoType)
-    : x(3), y(0), type(tetrominoType) { // ← To jest OTWARCIE {
+    : x(3), y(1), type(tetrominoType) { // ← To jest OTWARCIE {
+
+  // Fix: I piece spawns too low at y=1 because of its shape definition
+  if (type == TetrominoType::I) {
+    y = 0;
+  }
 
   std::cout << "[Tetromino] Tworzenie klocka typu: " << static_cast<int>(type)
             << '\n';
@@ -55,8 +61,12 @@ void Tetromino::render(sf::RenderWindow &window) {
   for (int row = 0; row < 4; row++) {
     for (int col = 0; col < 4; col++) {
       if (shape[row][col] == 1) {
+        int boardY = y + row;
+
+        // Always draw the block, even if in HIDDEN_ROWS area
+        // Position is offset by HIDDEN_ROWS so it appears above the board
         block.setPosition(offsetX + (x + col) * CELL_SIZE,
-                          offsetY + (y + row) * CELL_SIZE);
+                          offsetY + (boardY - Board::HIDDEN_ROWS) * CELL_SIZE);
         window.draw(block);
       }
     }
@@ -128,8 +138,10 @@ void Tetromino::renderGhost(sf::RenderWindow &window) {
   for (int row = 0; row < 4; row++) {
     for (int col = 0; col < 4; col++) {
       if (shape[row][col] == 1) {
+        int boardY = y + row;
+
         block.setPosition(offsetX + (x + col) * CELL_SIZE,
-                          offsetY + (y + row) * CELL_SIZE);
+                          offsetY + (boardY - Board::HIDDEN_ROWS) * CELL_SIZE);
 
         window.draw(block);
       }

@@ -14,7 +14,7 @@ private:
   static const int CELL_SIZE = 30;
   // Offset oznacza pozycję planszy (Board) w oknie, czyli margines
   int offsetX = 270;
-  int offsetY = 50;
+  int offsetY = 170;
 
 public:
   Tetromino(TetrominoType tetrominoType);

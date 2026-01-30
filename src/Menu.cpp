@@ -142,11 +142,11 @@ void Menu::setState(MenuState state) {
   // Wycentrowanie tytułu
   sf::FloatRect titleBounds = titleText.getLocalBounds();
   titleText.setOrigin(titleBounds.width / 2.0f, titleBounds.height / 2.0f);
-  titleText.setPosition(WINDOW_WIDTH / 2.0f, 150.0f);
+  titleText.setPosition(WINDOW_WIDTH / 2.0f, 225.0f); // +75px
 
   // Tworzenie obiektów tekstowych dla każdej opcji menu
   if (currentState != MenuState::DIFFICULTY_SELECTION) {
-    int startY = 300;
+    int startY = 375; // +75px
 
     for (size_t i = 0; i < menuItems.size(); i++) {
       sf::Text itemText;
@@ -176,29 +176,29 @@ void Menu::updateDifficultyDisplay() {
   // Wycentrowanie tekstu głównego
   sf::FloatRect diffBounds = difficultyText.getLocalBounds();
   difficultyText.setOrigin(diffBounds.width / 2.0f, diffBounds.height / 2.0f);
-  difficultyText.setPosition(WINDOW_WIDTH / 2.0f, 350.0f);
+  difficultyText.setPosition(WINDOW_WIDTH / 2.0f, 425.0f); // +75px
 
   // Pozycjonowanie lewej strzałki
   sf::FloatRect leftBounds = leftArrowText.getLocalBounds();
   leftArrowText.setOrigin(leftBounds.width / 2.0f, leftBounds.height / 2.0f);
-  leftArrowText.setPosition(WINDOW_WIDTH / 2.0f - 187.5f, 350.0f);
+  leftArrowText.setPosition(WINDOW_WIDTH / 2.0f - 187.5f, 425.0f); // +75px
 
   // Pozycjonowanie prawej strzałki
   sf::FloatRect rightBounds = rightArrowText.getLocalBounds();
   rightArrowText.setOrigin(rightBounds.width / 2.0f, rightBounds.height / 2.0f);
-  rightArrowText.setPosition(WINDOW_WIDTH / 2.0f + 187.5f, 350.0f);
+  rightArrowText.setPosition(WINDOW_WIDTH / 2.0f + 187.5f, 425.0f); // +75px
 
   // ZAMIANA MIEJSC: Back po lewej, Confirm po prawej
   // Pozycjonowanie przycisku Back (po lewej stronie)
   sf::FloatRect backBounds = backButton.getLocalBounds();
   backButton.setOrigin(backBounds.width / 2.0f, backBounds.height / 2.0f);
-  backButton.setPosition(WINDOW_WIDTH / 2.0f - 100.0f, 500.0f);
+  backButton.setPosition(WINDOW_WIDTH / 2.0f - 100.0f, 575.0f); // +75px
 
   // Pozycjonowanie przycisku Confirm (po prawej stronie)
   sf::FloatRect confirmBounds = confirmButton.getLocalBounds();
   confirmButton.setOrigin(confirmBounds.width / 2.0f,
                           confirmBounds.height / 2.0f);
-  confirmButton.setPosition(WINDOW_WIDTH / 2.0f + 100.0f, 500.0f);
+  confirmButton.setPosition(WINDOW_WIDTH / 2.0f + 100.0f, 575.0f); // +75px
 
   std::cout << "Zaktualizowano wyświetlanie trudności: Level "
             << selectedDifficulty << std::endl;
@@ -560,7 +560,7 @@ int Menu::checkDifficultyClick(float mouseX, float mouseY) const {
  */
 void Menu::render(sf::RenderWindow &window) const {
   // Rysujemy półprzezroczyste tło
-  sf::RectangleShape background(sf::Vector2f(800, 700));
+  sf::RectangleShape background(sf::Vector2f(800, 850));
   background.setFillColor(sf::Color(0, 0, 0, 200));
   window.draw(background);
 

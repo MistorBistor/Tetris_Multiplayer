@@ -8,7 +8,7 @@
 #include <random>
 #include <vector>
 
-GameEngine::GameEngine() : window(sf::VideoMode(800, 700), "Tetris") {}
+GameEngine::GameEngine() : window(sf::VideoMode(800, 850), "Tetris") {}
 
 void GameEngine::initialize() {
   isRunning = true;
@@ -583,12 +583,12 @@ void GameEngine::handleMenuSelection() {
 }
 
 void GameEngine::renderGameOver() {
-  sf::RectangleShape overlay(sf::Vector2f(800, 700));
+  sf::RectangleShape overlay(sf::Vector2f(800, 850));
   overlay.setPosition(0, 0);
   overlay.setFillColor(sf::Color(0, 0, 0, 180));
   window.draw(overlay);
 
-  // Tytuł GAME OVER
+  // Tytuł GAME OVER - przesunięty w dół żeby był bardziej na środku
   sf::Text gameOverText;
   gameOverText.setFont(mainMenu.getFont());
   gameOverText.setString("GAME OVER");
@@ -598,7 +598,7 @@ void GameEngine::renderGameOver() {
 
   sf::FloatRect gb = gameOverText.getLocalBounds();
   gameOverText.setOrigin(gb.left + gb.width / 2.f, gb.top + gb.height / 2.f);
-  gameOverText.setPosition(400.f, 150.f);
+  gameOverText.setPosition(400.f, 265.f); // +115px (225 + 40)
   window.draw(gameOverText);
 
   // Wynik gracza
@@ -610,7 +610,7 @@ void GameEngine::renderGameOver() {
 
   sf::FloatRect sb = scoreText.getLocalBounds();
   scoreText.setOrigin(sb.left + sb.width / 2.f, sb.top + sb.height / 2.f);
-  scoreText.setPosition(400.f, 210.f);
+  scoreText.setPosition(400.f, 325.f); // +115px (285 + 40)
   window.draw(scoreText);
 
   // Tekst "Enter Name:" - wycentrowany
@@ -623,14 +623,14 @@ void GameEngine::renderGameOver() {
   sf::FloatRect labelBounds = nameLabel.getLocalBounds();
   nameLabel.setOrigin(labelBounds.left + labelBounds.width / 2.f,
                       labelBounds.top + labelBounds.height / 2.f);
-  nameLabel.setPosition(400.f, 270.f);
+  nameLabel.setPosition(400.f, 385.f); // +115px (345 + 40)
   window.draw(nameLabel);
 
   // Input field dla nazwy - szerszy i wycentrowany
   const float inputWidth = 300.f;
   const float inputHeight = 45.f;
   const float inputX = 400.f - inputWidth / 2.f; // Wycentrowany
-  const float inputY = 290.f;
+  const float inputY = 405.f;                    // +115px (365 + 40)
 
   sf::RectangleShape inputBox(sf::Vector2f(inputWidth, inputHeight));
   inputBox.setPosition(inputX, inputY);
@@ -662,7 +662,7 @@ void GameEngine::renderGameOver() {
   const float buttonWidth = 180.f;
   const float buttonHeight = 50.f;
   const float buttonSpacing = 20.f;
-  const float buttonY = 370.f;
+  const float buttonY = 485.f; // +115px (445 + 40)
 
   // Oblicz pozycje X dla dwóch przycisków z odstępem
   const float totalWidth = buttonWidth * 2 + buttonSpacing;
@@ -729,7 +729,7 @@ void GameEngine::renderGameOver() {
 
   sf::FloatRect ib = infoText.getLocalBounds();
   infoText.setOrigin(ib.left + ib.width / 2.f, ib.top + ib.height / 2.f);
-  infoText.setPosition(400.f, 470.f);
+  infoText.setPosition(400.f, 585.f); // +115px (545 + 40)
   window.draw(infoText);
 }
 
@@ -1094,10 +1094,11 @@ void GameEngine::renderTetrominoPreview(sf::RenderWindow &window,
  * Pozycja: na wysokości Score (góra ekranu, lewa strona)
  */
 void GameEngine::renderHeldPiece(sf::RenderWindow &window) const {
+  // Lewa strona
   const float leftMargin = 60.0f;
 
   sf::RectangleShape panel(sf::Vector2f(150, 140));
-  panel.setPosition(leftMargin, 50);
+  panel.setPosition(leftMargin, 170); // Aligned with board top
   panel.setFillColor(sf::Color(50, 50, 50));
   panel.setOutlineThickness(2);
   panel.setOutlineColor(sf::Color::White);
@@ -1108,16 +1109,16 @@ void GameEngine::renderHeldPiece(sf::RenderWindow &window) const {
   titleText.setString("HOLD");
   titleText.setCharacterSize(20);
   titleText.setFillColor(sf::Color::Magenta);
-  titleText.setPosition(leftMargin + 20, 60);
+  titleText.setPosition(leftMargin + 20, 180);
   window.draw(titleText);
 
   if (hasHeldPiece) {
-    renderTetrominoPreview(window, heldTetrominoType, leftMargin + 30, 100);
+    renderTetrominoPreview(window, heldTetrominoType, leftMargin + 30, 220);
   }
 
   if (!canHold) {
     sf::RectangleShape overlay(sf::Vector2f(150, 140));
-    overlay.setPosition(leftMargin, 50);
+    overlay.setPosition(leftMargin, 170);
     overlay.setFillColor(sf::Color(0, 0, 0, 100));
     window.draw(overlay);
   }
@@ -1125,14 +1126,14 @@ void GameEngine::renderHeldPiece(sf::RenderWindow &window) const {
 
 /**
  * Renderuje panel "NEXT" z 4 następnymi klockami.
- * Wyrównany dolną granicą z dolną granicą siatki (y=650)
+ * Wyrównany dolną granicą z dolną granicą siatki (y=770)
  */
 void GameEngine::renderNextPiece(sf::RenderWindow &window) const {
   const float leftMargin = 60.0f;
-  const float topPosition = 210.0f; // Pod Hold
+  const float topPosition = 330.0f; // Pod Hold (170 + 140 + 20 gap)
 
-  // Siatka kończy się na y=650 (50 + 20*30)
-  // Next: wysokość = 650 - 210 = 440
+  // Siatka kończy się na y=770 (170 + 20*30)
+  // Next: wysokość = 770 - 330 = 440
   const float panelHeight = 440.0f;
 
   sf::RectangleShape panel(sf::Vector2f(150, panelHeight));
@@ -1196,7 +1197,6 @@ void GameEngine::handleControllerButton(unsigned int button) {
 void GameEngine::handleControllerAxis(sf::Joystick::Axis axis, float position) {
   static bool dpadLeftPressed = false;
   static bool dpadRightPressed = false;
-  static bool dpadDownPressed = false;
 
   const float threshold = 50.0f;
 
@@ -1226,9 +1226,6 @@ void GameEngine::handleControllerAxis(sf::Joystick::Axis axis, float position) {
       // DÓŁ - soft drop (ciągłe)
       std::cout << "[Controller] D-pad DOWN (soft drop)\n";
       handleKeyPress(sf::Keyboard::Down);
-      dpadDownPressed = true;
-    } else {
-      dpadDownPressed = false;
     }
   }
 }
@@ -1452,12 +1449,12 @@ void GameEngine::handleGameOverInput(sf::Event &event) {
     const float inputWidth = 300.f;
     const float inputHeight = 45.f;
     const float inputX = 400.f - inputWidth / 2.f;
-    const float inputY = 290.f;
+    const float inputY = 405.f; // +115px (365 + 40)
 
     const float buttonWidth = 180.f;
     const float buttonHeight = 50.f;
     const float buttonSpacing = 20.f;
-    const float buttonY = 370.f;
+    const float buttonY = 485.f; // +115px (445 + 40)
 
     const float totalWidth = buttonWidth * 2 + buttonSpacing;
     const float startX = 400.f - totalWidth / 2.f;
