@@ -1,11 +1,10 @@
 #ifndef MENU_HPP
 #define MENU_HPP
 
+#include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 #include <string>
 #include <vector>
-#include <SFML/Audio.hpp>
-
 
 /**
  * @enum MenuState
@@ -73,8 +72,6 @@ private:
 
   // TODO: Dodać czcionki, teksty i obiekty graficzne SFML
   // TODO: Dodać tło menu
-
- 
 
 public:
   /**
@@ -167,7 +164,7 @@ public:
    */
   void showGameOver(int score, bool isHighScore);
 
-  const sf::Font& getFont () const { return font; }
+  const sf::Font &getFont() const { return font; }
 };
 
 #endif // MENU_HPP

@@ -1,27 +1,26 @@
 #include "Score.h"
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
-Score::Score() 
+Score::Score()
     : currentScore(0), level(0), linesCleared(0), highScore(0), comboCount(0) {
   std::cout << "[Score] Konstruktor\n";
 }
 
-Score::~Score() {
-  std::cout << "[Score] Destruktor\n";
-}
+Score::~Score() { std::cout << "[Score] Destruktor\n"; }
 
 void Score::initialize() {
   std::cout << "[Score] Inicjalizacja\n";
-  
+
   // Ładowanie czcionki
-  if (!font.loadFromFile("../resources/fonts/SourceSansPro-Regular.otf")) {
+  if (!font.loadFromFile(
+          "../resources/fonts/Press_Start_2P/PressStart2P-Regular.ttf")) {
     std::cout << "[Score ERROR] Nie udało się załadować czcionki!\n";
     return;
   }
-  
+
   std::cout << "[Score] Czcionka załadowana\n";
-  
+
   // Wczytaj najwyższy wynik
   loadHighScore();
 }
@@ -38,37 +37,46 @@ void Score::addScore(int lines, int currentLevel) {
   if (lines <= 0) {
     return;
   }
-  
+
   // Punkty bazowe za linie
   int basePoints = 0;
   switch (lines) {
-    case 1: basePoints = 100; break;
-    case 2: basePoints = 300; break;
-    case 3: basePoints = 500; break;
-    case 4: basePoints = 800; break;
-    default: basePoints = 100 * lines; break;
+  case 1:
+    basePoints = 100;
+    break;
+  case 2:
+    basePoints = 300;
+    break;
+  case 3:
+    basePoints = 500;
+    break;
+  case 4:
+    basePoints = 800;
+    break;
+  default:
+    basePoints = 100 * lines;
+    break;
   }
-  
+
   // Mnożymy przez aktualny level
   int linePoints = basePoints * currentLevel;
-  
+
   // Zwiększamy combo
   comboCount++;
-  
+
   // Punkty za combo (50 * combo * level)
   int comboPoints = 50 * comboCount * currentLevel;
-  
+
   // Suma punktów
   int totalPoints = linePoints + comboPoints;
   currentScore += totalPoints;
   linesCleared += lines;
-  
+
   std::cout << "[Score] Usunięto " << lines << " linie. "
-            << "Punkty bazowe: " << linePoints 
-            << ", Combo x" << comboCount << ": " << comboPoints
-            << ", Razem: " << totalPoints 
+            << "Punkty bazowe: " << linePoints << ", Combo x" << comboCount
+            << ": " << comboPoints << ", Razem: " << totalPoints
             << ", Wynik: " << currentScore << "\n";
-  
+
   // Sprawdź czy to nowy rekord
   if (currentScore > highScore) {
     highScore = currentScore;
@@ -94,7 +102,8 @@ void Score::increaseLevel() {
 float Score::getFallSpeed() const {
   // Prędkość spadania na podstawie poziomu
   float speed = 1.0f - (level * 0.1f);
-  if (speed < 0.1f) speed = 0.1f;
+  if (speed < 0.1f)
+    speed = 0.1f;
   return speed;
 }
 
@@ -106,9 +115,7 @@ void Score::reset() {
   comboCount = 0;
 }
 
-bool Score::isNewHighScore() const {
-  return currentScore > highScore;
-}
+bool Score::isNewHighScore() const { return currentScore > highScore; }
 
 void Score::saveHighScore() const {
   std::ofstream file("highscore.dat");
@@ -136,25 +143,25 @@ void Score::loadHighScore() {
 /**
  * Renderuje wszystkie panele: Score (góra), Level (dół), Combo (nad siatką).
  */
-void Score::render(sf::RenderWindow& window) const {
+void Score::render(sf::RenderWindow &window) const {
   const float leftMargin = 60.0f;
-  const float rightEdge = 800.0f;  // ZMIENIONE z 720 na 800
+  const float rightEdge = 800.0f; // ZMIENIONE z 720 na 800
   const float panelWidth = 150.0f;
   const float rightMargin = 60.0f;
-  
+
   // Siatka: x=270, szerokość=300, koniec na x=570
   // Panele zaczynają się od x=590 (20px od siatki)
-  
+
   // PANEL SCORE - prawa strona z marginesem
-  float scoreX = 590;  // 20px od końca siatki
-  
+  float scoreX = 590; // 20px od końca siatki
+
   sf::RectangleShape scorePanel(sf::Vector2f(panelWidth, 100));
   scorePanel.setPosition(scoreX, 50);
   scorePanel.setFillColor(sf::Color(50, 50, 50));
   scorePanel.setOutlineThickness(2);
   scorePanel.setOutlineColor(sf::Color::White);
   window.draw(scorePanel);
-  
+
   sf::Text scoreTitle;
   scoreTitle.setFont(font);
   scoreTitle.setString("SCORE");
@@ -162,7 +169,7 @@ void Score::render(sf::RenderWindow& window) const {
   scoreTitle.setFillColor(sf::Color::Yellow);
   scoreTitle.setPosition(scoreX + 20, 60);
   window.draw(scoreTitle);
-  
+
   sf::Text scoreValue;
   scoreValue.setFont(font);
   scoreValue.setString(std::to_string(currentScore));
@@ -170,16 +177,16 @@ void Score::render(sf::RenderWindow& window) const {
   scoreValue.setFillColor(sf::Color::White);
   scoreValue.setPosition(scoreX + 20, 95);
   window.draw(scoreValue);
-  
+
   // PANEL LEVEL - na dole, wyrównany z dołem siatki
   // Siatka kończy się na y=650 (y=50 + 20*30)
   sf::RectangleShape levelPanel(sf::Vector2f(panelWidth, 80));
-  levelPanel.setPosition(scoreX, 570);  // 650 - 80 = 570
+  levelPanel.setPosition(scoreX, 570); // 650 - 80 = 570
   levelPanel.setFillColor(sf::Color(50, 50, 50));
   levelPanel.setOutlineThickness(2);
   levelPanel.setOutlineColor(sf::Color::White);
   window.draw(levelPanel);
-  
+
   sf::Text levelTitle;
   levelTitle.setFont(font);
   levelTitle.setString("LEVEL");
@@ -187,7 +194,7 @@ void Score::render(sf::RenderWindow& window) const {
   levelTitle.setFillColor(sf::Color::Cyan);
   levelTitle.setPosition(scoreX + 20, 580);
   window.draw(levelTitle);
-  
+
   sf::Text levelValue;
   levelValue.setFont(font);
   levelValue.setString(std::to_string(level));
@@ -195,7 +202,7 @@ void Score::render(sf::RenderWindow& window) const {
   levelValue.setFillColor(sf::Color::White);
   levelValue.setPosition(scoreX + 20, 610);
   window.draw(levelValue);
-  
+
   // PANEL COMBO - nad siatką (wyśrodkowany)
   if (comboCount > 0) {
     sf::RectangleShape comboPanel(sf::Vector2f(300, 35));
@@ -204,7 +211,7 @@ void Score::render(sf::RenderWindow& window) const {
     comboPanel.setOutlineThickness(2);
     comboPanel.setOutlineColor(sf::Color::Yellow);
     window.draw(comboPanel);
-    
+
     sf::Text comboText;
     comboText.setFont(font);
     comboText.setString("COMBO x" + std::to_string(comboCount) + "!");

@@ -9,34 +9,33 @@ private:
   int linesCleared;
   int highScore;
   int comboCount;
-  
+
   sf::Font font;
-  
+
 public:
   Score();
   ~Score();
-  
+
   void initialize();
-  
-  
+
   void addScore(int lines, int currentLevel);
-  
+
   void resetCombo();
-  
+
   void increaseLevel();
   float getFallSpeed() const;
   void reset();
-  
+
   bool isNewHighScore() const;
   void saveHighScore() const;
   void loadHighScore();
-  
+
   int getCurrentScore() const { return currentScore; }
   int getLevel() const { return level; }
   int getLinesCleared() const { return linesCleared; }
   int getHighScore() const { return highScore; }
   int getComboCount() const { return comboCount; }
-  
+
   void render(sf::RenderWindow &window) const;
 };
 #endif
