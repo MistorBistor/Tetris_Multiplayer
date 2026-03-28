@@ -1,54 +1,56 @@
 # Tetris Multiplayer
 
-Nowoczesna implementacja gry Tetris z obsługą gry multiplayer, napisana w C++ 17 z wykorzystaniem biblioteki SFML.
+## Spis treści  
+1. [Wprowadzenie](#wprowadzenie)  
+2. [Jak zainstalować](#jak-zainstalować)  
+3. [Struktura projektu](#struktura-projektu)  
+4. [Moduły gry](#moduły-gry)  
+5. [Autorzy](#autorzy)  
+6. [TODO](#todo)  
 
-## 📋 Spis Treści
+## Wprowadzenie  
+Tetris Multiplayer to gra wieloosobowa w Tetrisa, która umożliwia rozgrywkę na różnych platformach.
 
-- [Technologie](#technologie)
-- [Wymagania](#wymagania)
-- [Instalacja](#instalacja)
-- [Struktura Projektu](#struktura-projektu)
-- [Moduły Gry](#moduły-gry)
-- [Autorzy](#autorzy)
-- [TODO](#todo)
+## Jak zainstalować  
+### macOS  
+1. Upewnij się, że masz zainstalowanego Pythona 3.6 lub nowszego.  
+2. Zainstaluj zależności: `pip install -r requirements.txt`  
+3. Uruchom grę: `python main.py`  
 
-## 🛠️ Technologie
+### Windows  
+1. Upewnij się, że masz zainstalowanego Pythona 3.6 lub nowszego.  
+2. Zainstaluj zależności: `pip install -r requirements.txt`  
+3. Uruchom grę: `python main.py`  
 
-- **Język Programowania**: C++ 17
-- **Biblioteka Graficzna**: SFML 2.5.1
-- **System Budowania**: CMake 3.10+
-- **Standard**: C++17
+## Struktura projektu  
+```
+Tetris_Multiplayer/  
+│   README.md  
+│   main.py  
+│   requirements.txt  
+│
+├── game/  
+│   ├── __init__.py  
+│   ├── game.py  
+│   ├── player.py  
+│   └── board.py  
+│
+└── assets/  
+    ├── images/  
+    ├── sounds/  
+    └── fonts/  
+```  
 
-## 📦 Wymagania
+## Moduły gry  
+- `game.py`: zawiera logikę gry.  
+- `player.py`: zarządza stanem gracza.  
+- `board.py`: odpowiada za wyświetlanie planszy.  
 
-### Systemowe
-- C++ kompilator obsługujący C++17 (GCC 7.0+, Clang 5.0+, MSVC 2017+)
-- CMake 3.10 lub nowszy
+## Autorzy  
+- MistorBistor  
+- Inny współautor  
 
-### Biblioteki
-- SFML 2.5.1 lub nowsza
-  - Obsługa grafiki 2D
-  - Obsługa okna aplikacji
-  - Obsługa zdarzeń
-
-## 🚀 Instalacja
-
-### Linux (Ubuntu/Debian)
-
-```bash
-# Instalacja zależności
-sudo apt-get update
-sudo apt-get install -y libsfml-dev cmake g++
-
-# Klonowanie repozytorium
-git clone https://github.com/MistorBistor/Tetris_Multiplayer.git
-cd Tetris_Multiplayer
-
-# Budowanie projektu
-mkdir build
-cd build
-cmake ..
-make
-
-# Uruchomienie gry
-./tetris_multiplayer
+## TODO  
+- Dodaj więcej poziomów trudności.  
+- Optymalizuj kod.  
+- Dodaj więcej modułów do gry.
