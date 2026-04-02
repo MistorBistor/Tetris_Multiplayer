@@ -1,4 +1,4 @@
-# Podstawy informatyki - gra
+# Sieci komputerowe - gra
 
 Wstępną strukturę projektu wygenerował GitHub Copilot.
 
@@ -8,6 +8,7 @@ Wstępną strukturę projektu wygenerował GitHub Copilot.
 - System punktacji z POZIOMAMI TRUDNOŚCI
 - Menu główne, pauza i ekran końca gry
 - Zapis i wczytywanie NAJWYŻSZYCH WYNIKÓW do pliku
+- Rozgrywka poprzez SIEĆ z innym graczem
 
 ## Technologie
 
@@ -48,7 +49,7 @@ Wstępną strukturę projektu wygenerował GitHub Copilot.
 
 ```
 podstawy-informatyki-gra/
-├── src/              # Pliki źródłowe (.cpp)
+├── src/              # Pliki źródłowe
 │   ├── main.cpp
 │   ├── GameEngine.cpp
 │   ├── Board.cpp
@@ -60,17 +61,19 @@ podstawy-informatyki-gra/
 │   ├── GameEngine.h
 │   ├── Board.h
 │   ├── Tetromino.h
+│   ├── TetrominoType.h
 │   ├── Score.h
 │   ├── Menu.h
 │   └── FileManager.h
-├── resources/        # Potencjalne zasoby (czcionki, tekstury, dźwięki itp.)
-├── docs/             # Dokumentacja
-├── build/            # Katalog budowania (generowany)
-├── CMakeLists.txt    # Konfiguracja CMake
-├── .clang-format     # Konfiguracja formatowania kodu (styl wg Google)
+├── resources/         # Zasoby (audio, czcionki)
+├── docs/              # Dokumentacja
+├── build/             # Katalog budowania (generowany)
+├── CMakeLists.txt     # Konfiguracja CMake
+├── CMakeSettings.json # Ustawienia CMake dla Visual Studio
+├── .clang-format      # Konfiguracja formatowania kodu (styl wg Google)
 ├── .gitignore
-├── LICENSE           # Licencja MIT
-└── README.md         # Ten plik
+├── LICENSE            # Licencja MIT
+└── README.md
 ```
 
 ## Moduły gry
@@ -102,15 +105,10 @@ Zapis i odczyt stanu gry, najwyższych wyników i ustawień.
 ## Autorzy
 
 - Zespół programistów:
-  - Mateusz Mirczak
-  - Kacper Świrkosz
   - Bartłomiej Wiklik
+  - Juliusz Łatacz
 
-## Licencja
-
-Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](LICENSE).
-
-## TODO (podział prac)
+## TODO
 
 - [x] Implementacja silnika gry i głównej pętli
 - [x] Implementacja logiki planszy (siatka, renderowanie)
@@ -136,32 +134,38 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 - [x] Implementacja poziomów trudności
 - [x] Implementacja przyspieszania gry z poziomem
 - [x] Implementacja menu startowego
-- [x] Dodanie czcionki do `resources/`
+- [x] Dodanie czcionki do resources/
 
 ---
 
-- [ ] Naprawić zapełnianie się planszy
+- [x] Naprawić zapełnianie się planszy
 - [x] Implementacja menu pauzy
-- [ ] Implementacja systemu punktacji (100/300/500/800 pkt)
-- [ ] Implementacja wyświetlania wyniku (prawy panel)
-- [ ] Implementacja tekstowego Game Over z wynikiem
+- [x] Implementacja systemu punktacji (100/300/500/800 pkt)
+- [x] Implementacja wyświetlania wyniku (prawy panel)
+- [x] Implementacja tekstowego Game Over z wynikiem
 
 ---
 
-- [ ] Implementacja Ghost Piece (podgląd gdzie klocek spadnie)
-- [ ] Implementacja Hold Piece (przytrzymanie klocka)
-- [ ] Implementacja wyświetlania kolejki następnych klocków (3-5 klocków)
-- [ ] Implementacja systemu combo (mnożnik punktów za sekwencje)
-- [ ] Implementacja animacji usuwania linii
+- [x] Implementacja Ghost Piece (podgląd gdzie klocek spadnie)
+- [x] Implementacja Hold Piece (przytrzymanie klocka)
+- [x] Implementacja wyświetlania kolejki następnych klocków (3-5 klocków)
+- [x] Implementacja systemu combo (mnożnik punktów za sekwencje)
+- [x] Implementacja animacji usuwania linii
 
 ---
 
-- [ ] Implementacja lokalnej tablicy wyników (Top 10)
-- [ ] Implementacja statystyk gracza (czas gry, total linii, itp.)
-- [ ] Implementacja konfiguracji sterowania (remapping klawiszy; w pliku)
+- [x] Implementacja lokalnej tablicy wyników (Top 10)
+- [x] Implementacja statystyk gracza (czas gry, total linii, itp.)
 
 ---
 
-- [ ] Implementacja systemu dźwięków (SFX dla rotacji, drop, line clear)
-- [ ] Implementacja muzyki w tle
-- [ ] Implementacja 2-3 motywów kolorystycznych
+- [x] Implementacja systemu dźwięków (SFX dla rotacji, drop, line clear)
+- [x] Implementacja muzyki w tle
+- [x] Implementacja 2-3 motywów kolorystycznych
+
+---
+
+- [ ] Implementacja połączenia między komputerami
+- [ ] Implementacja podglądu planszy przeciwnika
+- [ ] Naprawienie sterowania w menu
+- [ ] Naprawianie wyświetlania nazw dla High Score
