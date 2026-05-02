@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Find SFML 2.5.1
+set(SFML_DIR "C:/SFML-2.5.1/lib/cmake/SFML")
 find_package(SFML 2.5.1 COMPONENTS system window graphics audio REQUIRED)
 
 # Collect all source files
