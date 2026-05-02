@@ -1,4 +1,4 @@
-# Podstawy informatyki - gra
+# Sieci komputerowe - gra
 
 Wstępną strukturę projektu wygenerował GitHub Copilot.
 
@@ -8,6 +8,7 @@ Wstępną strukturę projektu wygenerował GitHub Copilot.
 - System punktacji z POZIOMAMI TRUDNOŚCI
 - Menu główne, pauza i ekran końca gry
 - Zapis i wczytywanie NAJWYŻSZYCH WYNIKÓW do pliku
+- Rozgrywka poprzez SIEĆ z innym graczem
 
 ## Technologie
 
@@ -104,15 +105,10 @@ Zapis i odczyt stanu gry, najwyższych wyników i ustawień.
 ## Autorzy
 
 - Zespół programistów:
-  - Mateusz Mirczak
-  - Kacper Świrkosz
   - Bartłomiej Wiklik
+  - Juliusz Łatacz
 
-## Licencja
-
-Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](LICENSE).
-
-## TODO (podział prac)
+## TODO
 
 - [x] Implementacja silnika gry i głównej pętli
 - [x] Implementacja logiki planszy (siatka, renderowanie)
@@ -166,3 +162,10 @@ Ten projekt jest licencjonowany na licencji MIT - szczegóły w pliku [LICENSE](
 - [x] Implementacja systemu dźwięków (SFX dla rotacji, drop, line clear)
 - [x] Implementacja muzyki w tle
 - [x] Implementacja 2-3 motywów kolorystycznych
+
+---
+
+- [ ] Implementacja połączenia między komputerami
+- [ ] Implementacja podglądu planszy przeciwnika
+- [ ] Naprawienie sterowania w menu
+- [ ] Naprawianie wyświetlania nazw dla High Score
