@@ -2,6 +2,7 @@
 #include "Tetromino.h"
 #include <algorithm>
 #include <iostream>
+#include <random>
 
 Board::Board()
     : isClearing(false), clearTimer(0.0f), blinkOn(true),
@@ -81,9 +82,7 @@ bool Board::isValidPosition(int x, int y) const {
  * Blokowanie klocka na planszy oznacza ustawienie odpowiednich komórek w
  * siatce na typ klocka.
  */
-void Board::lockTetromino(int x, int y,
-                          const std::vector<std::vector<int>> &shape,
-                          TetrominoType type) {
+void Board::lockTetromino(int x, int y, const std::vector<std::vector<int>> &shape, TetrominoType type) {
   for (int row = 0; row < 4; row++) {
     for (int col = 0; col < 4; col++) {
       if (shape[row][col] == 1) {
@@ -293,4 +292,69 @@ sf::Color Board::getColorForType(TetrominoType type) {
   default:
     return sf::Color::Transparent;
   }
+}
+
+void Board::addPenaltyLines(int lineCount) {
+    if (lineCount <= 0) return;
+
+    std::cout << "[Board] Dodawanie " << lineCount << " linii kary\n";
+
+    // Generator liczb losowych dla pozycji dziury
+    static std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<int> holeDist(0, COLS - 1);
+
+    // Przesuń całą planszę w górę o lineCount
+    for (int row = 0; row < ROWS - lineCount; row++) {
+        for (int col = 0; col < COLS; col++) {
+            grid[row][col] = grid[row + lineCount][col];
+        }
+    }
+
+    // Dodaj nowe linie na dole (szare klocki z dziurą)
+    for (int addedRow = 0; addedRow < lineCount; addedRow++) {
+        int rowIndex = ROWS - lineCount + addedRow;
+        int holePosition = holeDist(rng);  // Losowa pozycja dziury
+
+        for (int col = 0; col < COLS; col++) {
+            if (col == holePosition) {
+                grid[rowIndex][col] = TetrominoType::Empty;  // Dziura
+            }
+            else {
+                // Szary klocek - użyjemy typu I jako placeholder dla szarego
+                grid[rowIndex][col] = TetrominoType::I;  // TODO: możesz dodać TetrominoType::Gray
+            }
+        }
+    }
+}
+
+std::vector<std::vector<int>> Board::getBoardState() const {
+    std::vector<std::vector<int>> state(ROWS, std::vector<int>(COLS));
+
+    for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLS; col++) {
+            state[row][col] = static_cast<int>(grid[row][col]);
+        }
+    }
+
+    return state;
+}
+
+void Board::setBoardState(const std::vector<std::vector<int>>& state) {
+    if (state.size() != ROWS || state[0].size() != COLS) {
+        std::cout << "[Board ERROR] Nieprawidłowy rozmiar stanu planszy!\n";
+        return;
+    }
+
+    for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLS; col++) {
+            grid[row][col] = static_cast<TetrominoType>(state[row][col]);
+        }
+    }
+}
+
+TetrominoType Board::getCellType(int row, int col) const {
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) {
+        return TetrominoType::Empty;
+    }
+    return grid[row][col];
 }

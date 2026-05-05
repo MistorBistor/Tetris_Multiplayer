@@ -8,11 +8,17 @@
 #include <random>
 #include <vector>
 
-GameEngine::GameEngine() : window(sf::VideoMode(800, 850), "Tetris") {}
+GameEngine::GameEngine()
+    : window(sf::VideoMode(800, 850), "Tetris"),
+    isMultiplayerMode(false),
+    boardSyncTimer(0.0f),
+    waitingForGameStart(false),
+    opponentDisconnected(false) {}
 
 void GameEngine::initialize() {
   isRunning = true;
   gameState = GameState::Menu;
+  isMultiplayerMode = false;
 
   mainMenu.initialize();
   mainMenu.setState(MenuState::MAIN_MENU);
@@ -65,15 +71,17 @@ void GameEngine::run() {
   }
 
   while (window.isOpen()) {
-    float deltaTime = clock.restart().asSeconds();
+      float deltaTime = clock.restart().asSeconds();
 
-    handleEvents();
+      handleEvents();
 
-    if (gameState == GameState::Playing) {
-      update(deltaTime);
-    }
-
-    render();
+      if (gameState == GameState::Playing) {
+          update(deltaTime);
+      }
+      else if (gameState == GameState::MultiplayerPlaying) {
+          updateMultiplayer(deltaTime);
+      }
+      render();
   }
 }
 
@@ -148,6 +156,28 @@ void GameEngine::handleEvents() {
     }
 
     if (gameState == GameState::Menu) {
+
+        //Obsługa wpisywania nazwy lobby
+        if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST &&
+            mainMenu.isTypingName() &&
+            event.type == sf::Event::TextEntered) {
+
+            if (event.text.unicode == '\b') {  // Backspace
+                mainMenu.removeCharFromLobbyName();
+            }
+            else if (event.text.unicode == '\r' || event.text.unicode == '\n') {  // Enter
+                mainMenu.setTypingLobbyName(false);
+            }
+            else if (event.text.unicode < 128 && event.text.unicode >= 32) {
+                char c = static_cast<char>(event.text.unicode);
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                    (c >= '0' && c <= '9') || c == ' ' || c == '_') {
+                    mainMenu.addCharToLobbyName(c);
+                }
+            }
+            continue;
+        }
+
       mainMenu.handleEvent(event);
 
       if (event.type == sf::Event::KeyPressed) {
@@ -182,10 +212,34 @@ void GameEngine::handleEvents() {
           }
           sfxMenu.play();
         }
+        else if (event.key.code == sf::Keyboard::R) {
+            if (mainMenu.getState() == MenuState::MULTIPLAYER_JOIN) {
+                std::cout << "[Menu] Odświeżanie listy lobby...\n";
+                std::vector<LobbyInfo> lobbies = networkManager.searchLobbies(2.0f);
+                mainMenu.setAvailableLobbies(lobbies);
+                sfxMenu.play();
+            }
+        }
+
       }
 
       if (event.type == sf::Event::MouseButtonPressed &&
           event.mouseButton.button == sf::Mouse::Left) {
+
+          // Obsługa kliknięcia w input box w MULTIPLAYER_HOST
+          if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST) {
+              sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
+                  static_cast<float>(event.mouseButton.y));
+
+              // Input box bounds (te same co w renderMultiplayerHost)
+              sf::FloatRect inputBox(200.f, 320.f, 400.f, 50.f);
+
+              if (inputBox.contains(mousePos)) {
+                  mainMenu.setTypingLobbyName(true);
+                  sfxMenu.play();
+              }
+          }
+
         if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
           int clickResult = mainMenu.checkDifficultyClick(
               static_cast<float>(event.mouseButton.x),
@@ -204,6 +258,7 @@ void GameEngine::handleEvents() {
       continue;
     }
 
+    // PLAYING
     if (gameState == GameState::Playing) {
       if (event.type == sf::Event::KeyPressed) {
         if (event.key.code == sf::Keyboard::Escape) {
@@ -222,10 +277,60 @@ void GameEngine::handleEvents() {
       }
     }
 
+    // MULTIPLAYER PLAYING
+    if (gameState == GameState::MultiplayerPlaying) {
+        if (event.type == sf::Event::KeyPressed) {
+            if (event.key.code == sf::Keyboard::Escape) {
+                std::cout << "[Multiplayer] Quit -> Menu\n";
+                networkManager.disconnect();
+                isMultiplayerMode = false;
+                mainMenu.setState(MenuState::MAIN_MENU);
+                gameState = GameState::Menu;
+                backgroundMusic.pause();
+            }
+            else {
+                if (board.isLineClearAnimating()) {
+                    continue;
+                }
+                handleKeyPress(event.key.code);
+            }
+        }
+    }
+
     // GAME OVER
-    if (gameState == GameState::GameOver) {
-      handleGameOverInput(event);
-      continue;
+    if (gameState == GameState::GameOver || gameState == GameState::MultiplayerGameOver) {
+        // Obsługa multiplayer game over - tylko przycisk Main Menu
+        if (gameState == GameState::MultiplayerGameOver) {
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) {
+                networkManager.disconnect();
+                isMultiplayerMode = false;
+                board.reset();
+                score.reset();
+                mainMenu.setState(MenuState::MAIN_MENU);
+                gameState = GameState::Menu;
+            }
+
+            if (event.type == sf::Event::MouseButtonPressed) {
+                sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
+                    static_cast<float>(event.mouseButton.y));
+                sf::FloatRect menuBounds(300.f, 450.f, 200.f, 50.f);
+
+                if (menuBounds.contains(mousePos)) {
+                    networkManager.disconnect();
+                    isMultiplayerMode = false;
+                    board.reset();
+                    score.reset();
+                    mainMenu.setState(MenuState::MAIN_MENU);
+                    gameState = GameState::Menu;
+                    sfxMenu.play();
+                }
+            }
+            continue;
+        }
+
+        // Reszta istniejącego kodu dla normalnego game over
+        handleGameOverInput(event);
+        continue;
     }
   }
 }
@@ -361,31 +466,47 @@ void GameEngine::update(float deltaTime) {
 }
 
 void GameEngine::render() {
-  window.clear(currentTheme.background);
+    window.clear(currentTheme.background);
 
-  if (gameState == GameState::Menu) {
-    mainMenu.render(window);
-  } else if (gameState == GameState::Playing) {
-    board.render(window);
+    if (gameState == GameState::Menu) {
+        //Specjalne renderowanie dla lobby screen
+        if (mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY) {
+            mainMenu.renderMultiplayerLobby(window,
+                networkManager.getPlayerCount(),
+                networkManager.getLobbyName());
+        }
+        else {
+            mainMenu.render(window);
+        }
+    }
+    else if (gameState == GameState::Playing) {
+        board.render(window);
 
-    if (!board.isLineClearAnimating()) {
-      renderGhostTetromino();
-      currentTetromino.render(window);
+        if (!board.isLineClearAnimating()) {
+            renderGhostTetromino();
+            currentTetromino.render(window);
+        }
+
+        score.render(window);
+        renderNextPiece(window);
+        renderHeldPiece(window);
+    }
+    else if (gameState == GameState::MultiplayerPlaying) {
+        renderMultiplayer();
+    }
+    else if (gameState == GameState::GameOver) {
+        board.render(window);
+        score.render(window);
+        renderNextPiece(window);
+        renderHeldPiece(window);
+        renderGameOver();
+    }
+    else if (gameState == GameState::MultiplayerGameOver) {
+        renderMultiplayer();
+        renderGameOver();
     }
 
-    // Renderuj UI
-    score.render(window);
-    renderNextPiece(window);
-    renderHeldPiece(window);
-  } else if (gameState == GameState::GameOver) {
-    board.render(window);
-    score.render(window);
-    renderNextPiece(window);
-    renderHeldPiece(window);
-    renderGameOver();
-  }
-
-  window.display();
+    window.display();
 }
 
 void GameEngine::shutdown() { std::cout << "[GameEngine] Shutdown\n"; }
@@ -445,7 +566,16 @@ void GameEngine::spawnNewTetromino() {
     std::cout << "[GameEngine] GAME OVER - no space for new piece\n";
     backgroundMusic.stop();
     sfxGameOver.play();
-    gameState = GameState::GameOver;
+
+    // Sprawdź czy to multiplayer
+    if (isMultiplayerMode && networkManager.isConnected()) {
+        networkManager.sendGameOver();
+        disconnectReason = "You Lose!";
+        gameState = GameState::MultiplayerGameOver;
+    }
+    else {
+        gameState = GameState::GameOver;
+    }
 
     // Reset zmiennych Game Over
     playerName = "";
@@ -623,6 +753,104 @@ void GameEngine::handleMenuSelection() {
       applyTheme(ColorThemeType::NEON);
     break;
 
+  case MenuAction::MULTIPLAYER:
+      std::cout << "[Menu] -> Multiplayer Menu\n";
+      mainMenu.setState(MenuState::MULTIPLAYER_MENU);
+      break;
+
+  case MenuAction::HOST_GAME:
+      std::cout << "[Menu] -> Host Game\n";
+      if (mainMenu.getState() == MenuState::MULTIPLAYER_MENU) {
+          // Przejdź do ekranu tworzenia lobby
+          mainMenu.setState(MenuState::MULTIPLAYER_HOST);
+          mainMenu.clearLobbyNameInput();
+      }
+      else if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST) {
+          // Faktyczne stworzenie lobby
+          std::string lobbyName = mainMenu.getLobbyNameInput();
+          if (lobbyName.empty()) {
+              lobbyName = "My Lobby";
+          }
+
+          if (networkManager.createLobby(lobbyName)) {
+              std::cout << "[Menu] Lobby stworzone: " << lobbyName << "\n";
+              mainMenu.setState(MenuState::MULTIPLAYER_LOBBY);
+              isMultiplayerMode = true;
+          }
+          else {
+              std::cout << "[Menu ERROR] Nie udało się stworzyć lobby\n";
+              mainMenu.setState(MenuState::MULTIPLAYER_MENU);
+          }
+      }
+      break;
+
+  case MenuAction::JOIN_GAME:
+      std::cout << "[Menu] -> Join Game (szukam lobby...)\n";
+      {
+          std::vector<LobbyInfo> lobbies = networkManager.searchLobbies(2.0f);
+          mainMenu.setAvailableLobbies(lobbies);
+          mainMenu.setState(MenuState::MULTIPLAYER_JOIN);
+      }
+      break;
+
+  case MenuAction::JOIN_SELECTED_LOBBY:
+      std::cout << "[Menu] Dołączanie do lobby...\n";
+      {
+          int idx = mainMenu.getSelectedLobbyIndex();
+          std::vector<LobbyInfo> lobbies = mainMenu.getAvailableLobbies();
+
+          if (idx >= 0 && idx < (int)lobbies.size()) {
+              if (networkManager.joinLobby(lobbies[idx])) {
+                  std::cout << "[Menu] Połączono z lobby!\n";
+                  isMultiplayerMode = true;
+                  waitingForGameStart = true;
+                  mainMenu.setState(MenuState::MULTIPLAYER_LOBBY);
+              }
+              else {
+                  std::cout << "[Menu ERROR] Nie udało się dołączyć\n";
+                  mainMenu.setState(MenuState::MULTIPLAYER_MENU);
+              }
+          }
+      }
+      break;
+
+  case MenuAction::START_MULTIPLAYER:
+      std::cout << "[Menu] Start multiplayer game\n";
+      if (networkManager.isHosting() && networkManager.isConnected()) {
+          // Host startuje grę
+          networkManager.startGame();
+
+          // Zainicjuj grę
+          board.reset();
+          opponentBoard.reset();
+          score.reset();
+
+          nextQueue.clear();
+          for (int i = 0; i < 5; i++) {
+              nextQueue.push_back(nextFromBag());
+          }
+
+          gameTimeSec = 0.0f;
+          score.setGameTimeSeconds(0.0f);
+          heldTetrominoType = TetrominoType::Empty;
+          hasHeldPiece = false;
+          canHold = true;
+          boardSyncTimer = 0.0f;
+
+          gameState = GameState::MultiplayerPlaying;
+          spawnNewTetromino();
+          backgroundMusic.play();
+      }
+      break;
+
+  case MenuAction::QUIT_LOBBY:
+      std::cout << "[Menu] Quit lobby\n";
+      networkManager.disconnect();
+      isMultiplayerMode = false;
+      waitingForGameStart = false;
+      mainMenu.setState(MenuState::MULTIPLAYER_MENU);
+      break;
+
   default:
     break;
   }
@@ -633,6 +861,55 @@ void GameEngine::renderGameOver() {
   overlay.setPosition(0, 0);
   overlay.setFillColor(sf::Color(0, 0, 0, 180));
   window.draw(overlay);
+
+  // Sprawdź czy to multiplayer game over
+  if (gameState == GameState::MultiplayerGameOver) {
+      sf::Text gameOverText;
+      gameOverText.setFont(mainMenu.getFont());
+
+      // Wyświetl odpowiedni komunikat
+      if (disconnectReason == "You Win!") {
+          gameOverText.setString("YOU WIN!");
+          gameOverText.setFillColor(sf::Color::Green);
+      }
+      else if (disconnectReason == "Opponent Disconnected") {
+          gameOverText.setString("OPPONENT\nDISCONNECTED");
+          gameOverText.setFillColor(sf::Color::Yellow);
+      }
+      else {
+          gameOverText.setString("YOU LOSE!");
+          gameOverText.setFillColor(sf::Color::Red);
+      }
+
+      gameOverText.setCharacterSize(35);
+      gameOverText.setStyle(sf::Text::Bold);
+      sf::FloatRect gb = gameOverText.getLocalBounds();
+      gameOverText.setOrigin(gb.left + gb.width / 2.f, gb.top + gb.height / 2.f);
+      gameOverText.setPosition(400.f, 300.f);
+      window.draw(gameOverText);
+
+      // Przycisk Main Menu
+      const float buttonWidth = 200.f;
+      const float buttonHeight = 50.f;
+      sf::RectangleShape menuButton(sf::Vector2f(buttonWidth, buttonHeight));
+      menuButton.setPosition(300.f, 450.f);
+      menuButton.setFillColor(sf::Color(140, 40, 40));
+      menuButton.setOutlineThickness(3);
+      menuButton.setOutlineColor(sf::Color(180, 80, 80));
+      window.draw(menuButton);
+
+      sf::Text menuText;
+      menuText.setFont(mainMenu.getFont());
+      menuText.setString("MAIN MENU");
+      menuText.setCharacterSize(20);
+      menuText.setFillColor(sf::Color::White);
+      sf::FloatRect mb = menuText.getLocalBounds();
+      menuText.setOrigin(mb.left + mb.width / 2.f, mb.top + mb.height / 2.f);
+      menuText.setPosition(400.f, 475.f);
+      window.draw(menuText);
+
+      return;  // Nie pokazuj normalnego game over screen
+  }
 
   // Tytuł GAME OVER - przesunięty w dół żeby był bardziej na środku
   sf::Text gameOverText;
@@ -1077,9 +1354,7 @@ void GameEngine::holdCurrentPiece() {
 /**
  * Pomocnicza funkcja do renderowania podglądu klocka.
  */
-void GameEngine::renderTetrominoPreview(sf::RenderWindow &window,
-                                        TetrominoType type, float x,
-                                        float y) const {
+void GameEngine::renderTetrominoPreview(sf::RenderWindow &window, TetrominoType type, float x, float y) const {
   if (type == TetrominoType::Empty) {
     return;
   }
@@ -1329,8 +1604,7 @@ void GameEngine::handleControllerButtonMenu(unsigned int button) {
 /**
  * Obsługa osi kontrolera w menu (D-pad i joystick).
  */
-void GameEngine::handleControllerAxisMenu(sf::Joystick::Axis axis,
-                                          float position) {
+void GameEngine::handleControllerAxisMenu(sf::Joystick::Axis axis, float position) {
   static bool upPressed = false;
   static bool downPressed = false;
   static bool leftPressed = false;
@@ -1585,4 +1859,307 @@ void GameEngine::applyTheme(ColorThemeType type) {
   score.setTheme(currentTheme);
   mainMenu.setTheme(currentTheme);
   currentTetromino.setTheme(currentTheme);
+}
+
+void GameEngine::updateMultiplayer(float deltaTime) {
+    // Jeśli jesteśmy klientem i czekamy na start
+    if (!networkManager.isHosting() && waitingForGameStart) {
+        // Sprawdź czy host wysłał sygnał START
+        sf::Packet packet;
+        if (networkManager.receivePacket(packet)) {
+            uint8_t msgType;
+            packet >> msgType;
+
+            if (static_cast<MessageType>(msgType) == MessageType::GAME_START) {
+                std::cout << "[Multiplayer] Otrzymano sygnał START od hosta\n";
+                waitingForGameStart = false;
+
+                // Zainicjuj grę
+                board.reset();
+                opponentBoard.reset();
+                score.reset();
+
+                nextQueue.clear();
+                for (int i = 0; i < 5; i++) {
+                    nextQueue.push_back(nextFromBag());
+                }
+
+                gameTimeSec = 0.0f;
+                heldTetrominoType = TetrominoType::Empty;
+                hasHeldPiece = false;
+                canHold = true;
+                boardSyncTimer = 0.0f;
+
+                gameState = GameState::MultiplayerPlaying;
+                spawnNewTetromino();
+                backgroundMusic.play();
+            }
+        }
+
+        // Nasłuchuj na połączenia (jeśli jesteśmy hostem w lobby)
+        if (networkManager.isHosting() && !networkManager.isConnected()) {
+            networkManager.listenForClient();
+        }
+
+        return;
+    }
+
+    // Nasłuchuj na połączenia (jeśli jesteśmy hostem w lobby)
+    if (networkManager.isHosting() && !networkManager.isConnected() &&
+        mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY) {
+        networkManager.listenForClient();
+    }
+
+    // Normalna aktualizacja gry
+    gameTimeSec += deltaTime;
+    score.setGameTimeSeconds(gameTimeSec);
+
+    // Sprawdź ataki od przeciwnika
+    checkForIncomingAttacks();
+
+    // Sprawdź czy przeciwnik przegrał
+    if (networkManager.receivedOpponentGameOver()) {
+        std::cout << "[Multiplayer] Wygrałeś!\n";
+        disconnectReason = "You Win!";
+        gameState = GameState::MultiplayerGameOver;
+        backgroundMusic.stop();
+        return;
+    }
+
+    // Sprawdź rozłączenie
+    if (!networkManager.isConnected() && !opponentDisconnected) {
+        std::cout << "[Multiplayer] Przeciwnik się rozłączył\n";
+        opponentDisconnected = true;
+        disconnectReason = "Opponent Disconnected";
+        gameState = GameState::MultiplayerGameOver;
+        backgroundMusic.stop();
+        return;
+    }
+
+    // Synchronizuj planszę
+    boardSyncTimer += deltaTime;
+    if (boardSyncTimer >= boardSyncInterval) {
+        boardSyncTimer = 0.0f;
+        syncBoardWithOpponent();
+    }
+
+    // Soft drop z kontrolera
+    if (sf::Joystick::isConnected(0)) {
+        float povY = sf::Joystick::getAxisPosition(0, sf::Joystick::PovY);
+        if (povY < -50.0f) {
+            static float softDropTimer = 0.0f;
+            softDropTimer += deltaTime;
+            const float softDropSpeed = 0.05f;
+
+            if (softDropTimer >= softDropSpeed) {
+                softDropTimer = 0.0f;
+                currentTetromino.moveDown();
+
+                if (checkCollision()) {
+                    currentTetromino.moveUp();
+                    if (!isLocking) {
+                        isLocking = true;
+                        lockTimer = 0.0f;
+                        hasTouchedGround = true;
+                    }
+                    if (sfxLanded.getStatus() != sf::Sound::Playing)
+                        sfxLanded.play();
+                }
+            }
+        }
+    }
+
+    // Animacja czyszczenia linii
+    if (board.isLineClearAnimating()) {
+        int cleared = board.updateClearAnimation(deltaTime);
+        if (cleared > 0) {
+            std::cout << "[Multiplayer] Wyczyszczono " << cleared << " linii\n";
+
+            score.addScore(cleared, score.getLevel());
+
+            // WYŚLIJ ATAK DO PRZECIWNIKA
+            sendAttackToOpponent(cleared);
+
+            spawnNewTetromino();
+        }
+        return;
+    }
+
+    // Reszta logiki jak w normalnej grze
+    static bool wasClearing = false;
+    if (wasClearing && !board.isLineClearAnimating()) {
+        score.resetCombo();
+        wasClearing = false;
+    }
+    if (board.isLineClearAnimating()) {
+        wasClearing = true;
+    }
+
+    fallTimer += deltaTime;
+
+    if (fallTimer >= fallSpeed) {
+        fallTimer = 0.0f;
+        currentTetromino.moveDown();
+
+        if (checkCollision()) {
+            currentTetromino.moveUp();
+
+            if (!hasTouchedGround) {
+                hasTouchedGround = true;
+                lockMoveCounter = 0;
+            }
+
+            if (!isLocking) {
+                isLocking = true;
+                lockTimer = 0.0f;
+                if (sfxLanded.getStatus() != sf::Sound::Playing)
+                    sfxLanded.play();
+            }
+        }
+        else {
+            if (isLocking) {
+                isLocking = false;
+                lockTimer = 0.0f;
+            }
+        }
+    }
+
+    if (isLocking) {
+        if (!isPieceGrounded()) {
+            isLocking = false;
+            lockTimer = 0.0f;
+            return;
+        }
+
+        if (hasTouchedGround && lockMoveCounter >= maxLockMoves) {
+            lockTetromino();
+
+            if (board.startClearAnimation()) {
+                sfxLineClear.play();
+            }
+            else {
+                score.resetCombo();
+                spawnNewTetromino();
+            }
+            return;
+        }
+
+        lockTimer += deltaTime;
+
+        if (lockTimer >= lockDelay) {
+            lockTetromino();
+
+            if (board.startClearAnimation()) {
+                sfxLineClear.play();
+            }
+            else {
+                score.resetCombo();
+                spawnNewTetromino();
+            }
+            return;
+        }
+    }
+}
+
+void GameEngine::renderMultiplayer() {
+    // Lewa strona: Twoja plansza
+    board.render(window);
+
+    if (!board.isLineClearAnimating()) {
+        renderGhostTetromino();
+        currentTetromino.render(window);
+    }
+
+    // Prawa strona: Plansza przeciwnika
+    renderOpponentBoard(window);
+
+    // UI
+    score.render(window);
+    renderNextPiece(window);
+    renderHeldPiece(window);
+}
+
+void GameEngine::renderOpponentBoard(sf::RenderWindow& window) const {
+    const int CELL_SIZE = 15;  // Mniejszy rozmiar dla planszy przeciwnika
+    const int offsetX = 580;   // Prawa strona ekranu
+    const int offsetY = 170;
+
+    sf::RectangleShape cell(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
+
+    // Tytuł
+    sf::Text title;
+    title.setFont(uiFont);
+    title.setString("OPPONENT");
+    title.setCharacterSize(16);
+    title.setFillColor(currentTheme.highlight);
+    title.setPosition(offsetX, offsetY - 30);
+    window.draw(title);
+
+    // Ramka wokół planszy
+    sf::RectangleShape border(sf::Vector2f(Board::COLS * CELL_SIZE,
+        (Board::ROWS - Board::HIDDEN_ROWS) * CELL_SIZE));
+    border.setPosition(offsetX, offsetY);
+    border.setFillColor(sf::Color::Transparent);
+    border.setOutlineThickness(2);
+    border.setOutlineColor(currentTheme.text);
+    window.draw(border);
+
+    // Rysuj planszę przeciwnika
+    for (int row = Board::HIDDEN_ROWS; row < Board::ROWS; row++) {
+        for (int col = 0; col < Board::COLS; col++) {
+            cell.setPosition(offsetX + col * CELL_SIZE,
+                offsetY + (row - Board::HIDDEN_ROWS) * CELL_SIZE);
+
+            TetrominoType cellType = opponentBoard.getCellType(row, col);
+
+            if (cellType == TetrominoType::Empty) {
+                cell.setFillColor(currentTheme.background);
+                cell.setOutlineThickness(1);
+                cell.setOutlineColor(currentTheme.panel);
+            }
+            else {
+                // Użyj koloru z motywu dla typu klocka
+                switch (cellType) {
+                case TetrominoType::I: cell.setFillColor(currentTheme.I); break;
+                case TetrominoType::O: cell.setFillColor(currentTheme.O); break;
+                case TetrominoType::T: cell.setFillColor(currentTheme.T); break;
+                case TetrominoType::S: cell.setFillColor(currentTheme.S); break;
+                case TetrominoType::Z: cell.setFillColor(currentTheme.Z); break;
+                case TetrominoType::J: cell.setFillColor(currentTheme.J); break;
+                case TetrominoType::L: cell.setFillColor(currentTheme.L); break;
+                default: cell.setFillColor(currentTheme.text); break;
+                }
+                cell.setOutlineThickness(0);
+            }
+
+            window.draw(cell);
+        }
+    }
+}
+
+void GameEngine::sendAttackToOpponent(int linesCleared) {
+    if (linesCleared > 0) {
+        networkManager.sendLinesCleared(linesCleared);
+        std::cout << "[Multiplayer] Wysłano atak: " << linesCleared << " linii\n";
+    }
+}
+
+void GameEngine::checkForIncomingAttacks() {
+    int attackLines = networkManager.receiveAttack();
+
+    if (attackLines > 0) {
+        std::cout << "[Multiplayer] Otrzymano atak! Dodawanie " << attackLines << " linii\n";
+        board.addPenaltyLines(attackLines);
+    }
+}
+
+void GameEngine::syncBoardWithOpponent() {
+    // Wyślij nasz stan planszy
+    networkManager.sendBoardState(board.getBoardState());
+
+    // Odbierz stan planszy przeciwnika
+    std::vector<std::vector<int>> opponentState;
+    if (networkManager.receiveBoardState(opponentState)) {
+        opponentBoard.setBoardState(opponentState);
+    }
 }

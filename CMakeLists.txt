@@ -26,7 +26,7 @@ file(GLOB_RECURSE HEADERS
 )
 
 # Create executable
-add_executable(tetris ${SOURCES} "include/TetrominoType.h" "include/ColorTheme.h" "src/ColorTheme.cpp")
+add_executable(tetris ${SOURCES} "include/TetrominoType.h" "include/ColorTheme.h" "src/ColorTheme.cpp" "include/NetworkManager.h" "src/NetworkManager.cpp")
 
 # Use target_include_directories instead of include_directories (modern CMake)
 target_include_directories(tetris PRIVATE include)
@@ -37,6 +37,7 @@ target_link_libraries(tetris PRIVATE
     sfml-window
     sfml-graphics
     sfml-audio
+    sfml-network
 )
 
 # Compiler warnings
