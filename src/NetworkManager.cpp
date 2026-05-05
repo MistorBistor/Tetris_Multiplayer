@@ -1,4 +1,4 @@
-#include "NetworkManager.h"
+ï»¿#include "NetworkManager.h"
 #include <iostream>
 #include <thread>
 
@@ -18,14 +18,14 @@ bool NetworkManager::createLobby(const std::string& name) {
     lobbyName = name;
     connected = false;
 
-    // Bind listener na dowolnym dostêpnym porcie
+    // Bind listener na dowolnym dostÄ™pnym porcie
     if (listener.listen(tcpPort) != sf::Socket::Done) {
-        std::cout << "[NetworkManager ERROR] Nie mo¿na nas³uchiwaæ na porcie "
+        std::cout << "[NetworkManager ERROR] Nie moÅ¼na nasÅ‚uchiwaÄ‡ na porcie "
             << tcpPort << "\n";
         return false;
     }
 
-    // Ustaw non-blocking ¿eby nie blokowaæ g³ównej pêtli
+    // Ustaw non-blocking Å¼eby nie blokowaÄ‡ gÅ‚Ã³wnej pÄ™tli
     listener.setBlocking(false);
 
     std::cout << "[NetworkManager] Lobby stworzone na porcie " << tcpPort
@@ -33,7 +33,7 @@ bool NetworkManager::createLobby(const std::string& name) {
 
     // Bind UDP socket do broadcastowania
     if (udpSocket.bind(BROADCAST_PORT) != sf::Socket::Done) {
-        std::cout << "[NetworkManager ERROR] Nie mo¿na zbindowaæ UDP\n";
+        std::cout << "[NetworkManager ERROR] Nie moÅ¼na zbindowaÄ‡ UDP\n";
         return false;
     }
 
@@ -47,9 +47,9 @@ bool NetworkManager::listenForClient() {
         return false;
     }
 
-    // SprawdŸ czy ktoœ siê ³¹czy
+    // SprawdÅº czy ktoÅ› siÄ™ Å‚Ä…czy
     if (listener.accept(playerSocket) == sf::Socket::Done) {
-        std::cout << "[NetworkManager] Klient siê po³¹czy³: "
+        std::cout << "[NetworkManager] Klient siÄ™ poÅ‚Ä…czyÅ‚: "
             << playerSocket.getRemoteAddress() << "\n";
 
         playerSocket.setBlocking(false);
@@ -65,7 +65,7 @@ void NetworkManager::startGame() {
         return;
     }
 
-    std::cout << "[NetworkManager] Wysy³am sygna³ START GAME\n";
+    std::cout << "[NetworkManager] WysyÅ‚am sygnaÅ‚ START GAME\n";
 
     sf::Packet packet;
     packet << static_cast<uint8_t>(MessageType::GAME_START);
@@ -80,23 +80,31 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
 
     std::vector<LobbyInfo> lobbies;
 
-    // Bind UDP socket do odbierania broadcastów
+    // Bind UDP socket do odbierania broadcastÃ³w
     sf::UdpSocket searchSocket;
     if (searchSocket.bind(sf::Socket::AnyPort) != sf::Socket::Done) {
-        std::cout << "[NetworkManager ERROR] Nie mo¿na zbindowaæ search socket\n";
+        std::cout << "[NetworkManager ERROR] Nie moÅ¼na zbindowaÄ‡ search socket\n";
         return lobbies;
     }
 
     searchSocket.setBlocking(false);
 
-    // Wyœlij request broadcast
+    // WyÅ›lij request broadcast
     sf::Packet requestPacket;
     requestPacket << static_cast<uint8_t>(MessageType::LOBBY_LIST_REQUEST);
 
-    // Broadcast do ca³ej sieci lokalnej
-    searchSocket.send(requestPacket, sf::IpAddress::Broadcast, BROADCAST_PORT);
+    // DODAJ DEBUG â†“â†“â†“
+    std::cout << "[NetworkManager] MÃ³j IP: " << sf::IpAddress::getLocalAddress() << "\n";
+    std::cout << "[NetworkManager] Port wyszukiwania: " << searchSocket.getLocalPort() << "\n";
+    // â†‘â†‘â†‘ KONIEC DEBUG
 
-    std::cout << "[NetworkManager] Wys³ano broadcast request\n";
+    // Broadcast do caÅ‚ej sieci lokalnej
+    if (searchSocket.send(requestPacket, sf::IpAddress::Broadcast, BROADCAST_PORT) != sf::Socket::Done) {
+        std::cout << "[NetworkManager ERROR] Nie udaÅ‚o siÄ™ wysÅ‚aÄ‡ broadcastu\n";
+        return lobbies;
+    }
+
+    std::cout << "[NetworkManager] WysÅ‚ano broadcast request na port " << BROADCAST_PORT << "\n";
 
     // Czekaj na odpowiedzi przez timeoutSeconds
     sf::Clock clock;
@@ -105,14 +113,29 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
         sf::IpAddress senderIP;
         unsigned short senderPort;
 
-        if (searchSocket.receive(responsePacket, senderIP, senderPort) ==
-            sf::Socket::Done) {
+        sf::Socket::Status status = searchSocket.receive(responsePacket, senderIP, senderPort);
+
+        // DODAJ DEBUG â†“â†“â†“
+        if (status == sf::Socket::Error) {
+            std::cout << "[NetworkManager] BÅ‚Ä…d odbierania pakietu\n";
+        }
+        else if (status == sf::Socket::NotReady) {
+            // Normalnie, nic nie przyszÅ‚o jeszcze
+        }
+        else if (status == sf::Socket::Disconnected) {
+            std::cout << "[NetworkManager] Socket disconnected\n";
+        }
+        // â†‘â†‘â†‘ KONIEC DEBUG
+
+        if (status == sf::Socket::Done) {
             uint8_t msgType;
             responsePacket >> msgType;
 
-            if (static_cast<MessageType>(msgType) ==
-                MessageType::LOBBY_ANNOUNCEMENT) {
-                // Odebrano og³oszenie lobby
+            std::cout << "[NetworkManager] Otrzymano pakiet od " << senderIP
+                << ":" << senderPort << " typu " << (int)msgType << "\n";
+
+            if (static_cast<MessageType>(msgType) == MessageType::LOBBY_ANNOUNCEMENT) {
+                // Odebrano ogÅ‚oszenie lobby
                 std::string name;
                 unsigned short tcpPort;
                 int playerCount;
@@ -128,7 +151,7 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
             }
         }
 
-        // Ma³e opóŸnienie ¿eby nie zjadaæ CPU
+        // MaÅ‚e opÃ³Åºnienie Å¼eby nie zjadaÄ‡ CPU
         sf::sleep(sf::milliseconds(50));
     }
 
@@ -137,27 +160,27 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
 }
 
 bool NetworkManager::joinLobby(const LobbyInfo& lobby) {
-    std::cout << "[NetworkManager] £¹czenie z lobby: " << lobby.name << " ("
+    std::cout << "[NetworkManager] ÅÄ…czenie z lobby: " << lobby.name << " ("
         << lobby.hostIP << ":" << lobby.hostPort << ")\n";
 
     isHost = false;
     opponentIP = sf::IpAddress(lobby.hostIP);
 
-    // Po³¹cz siê z hostem
+    // PoÅ‚Ä…cz siÄ™ z hostem
     if (playerSocket.connect(opponentIP, lobby.hostPort, sf::seconds(5)) !=
         sf::Socket::Done) {
-        std::cout << "[NetworkManager ERROR] Nie mo¿na po³¹czyæ siê z hostem\n";
+        std::cout << "[NetworkManager ERROR] Nie moÅ¼na poÅ‚Ä…czyÄ‡ siÄ™ z hostem\n";
         return false;
     }
 
     playerSocket.setBlocking(false);
     connected = true;
 
-    std::cout << "[NetworkManager] Po³¹czono z hostem!\n";
+    std::cout << "[NetworkManager] PoÅ‚Ä…czono z hostem!\n";
     return true;
 }
 
-// === WSPÓLNE ===
+// === WSPÃ“LNE ===
 
 void NetworkManager::sendBoardState(
     const std::vector<std::vector<int>>& boardData) {
@@ -168,11 +191,11 @@ void NetworkManager::sendBoardState(
     sf::Packet packet;
     packet << static_cast<uint8_t>(MessageType::BOARD_STATE);
 
-    // Wyœlij rozmiar planszy
+    // WyÅ›lij rozmiar planszy
     packet << static_cast<uint32_t>(boardData.size());
     packet << static_cast<uint32_t>(boardData[0].size());
 
-    // Wyœlij dane planszy
+    // WyÅ›lij dane planszy
     for (const auto& row : boardData) {
         for (int cell : row) {
             packet << static_cast<int32_t>(cell);
@@ -224,7 +247,7 @@ void NetworkManager::sendLinesCleared(int lineCount) {
         return;
     }
 
-    std::cout << "[NetworkManager] Wysy³am atak: " << lineCount << " linii\n";
+    std::cout << "[NetworkManager] WysyÅ‚am atak: " << lineCount << " linii\n";
 
     sf::Packet packet;
     packet << static_cast<uint8_t>(MessageType::LINES_CLEARED);
@@ -263,7 +286,7 @@ void NetworkManager::sendGameOver() {
         return;
     }
 
-    std::cout << "[NetworkManager] Wysy³am GAME OVER\n";
+    std::cout << "[NetworkManager] WysyÅ‚am GAME OVER\n";
 
     sf::Packet packet;
     packet << static_cast<uint8_t>(MessageType::GAME_OVER);
@@ -285,7 +308,7 @@ bool NetworkManager::receivedOpponentGameOver() {
     packet >> msgType;
 
     if (static_cast<MessageType>(msgType) == MessageType::GAME_OVER) {
-        std::cout << "[NetworkManager] Przeciwnik przegra³!\n";
+        std::cout << "[NetworkManager] Przeciwnik przegraÅ‚!\n";
         return true;
     }
 
@@ -294,9 +317,9 @@ bool NetworkManager::receivedOpponentGameOver() {
 
 void NetworkManager::disconnect() {
     if (connected) {
-        std::cout << "[NetworkManager] Roz³¹czanie...\n";
+        std::cout << "[NetworkManager] RozÅ‚Ä…czanie...\n";
 
-        // Wyœlij informacjê o roz³¹czeniu
+        // WyÅ›lij informacjÄ™ o rozÅ‚Ä…czeniu
         sf::Packet packet;
         packet << static_cast<uint8_t>(MessageType::DISCONNECT);
         sendPacket(packet);
@@ -316,7 +339,7 @@ void NetworkManager::disconnect() {
 
 bool NetworkManager::sendPacket(sf::Packet& packet) {
     if (playerSocket.send(packet) != sf::Socket::Done) {
-        std::cout << "[NetworkManager ERROR] B³¹d wysy³ania pakietu\n";
+        std::cout << "[NetworkManager ERROR] BÅ‚Ä…d wysyÅ‚ania pakietu\n";
         return false;
     }
     return true;
@@ -329,9 +352,43 @@ bool NetworkManager::receivePacket(sf::Packet& packet) {
         return true;
     }
     else if (status == sf::Socket::Disconnected) {
-        std::cout << "[NetworkManager] Przeciwnik siê roz³¹czy³\n";
+        std::cout << "[NetworkManager] Przeciwnik siÄ™ rozÅ‚Ä…czyÅ‚\n";
         connected = false;
     }
 
     return false;
+}
+void NetworkManager::respondToBroadcastRequests() {
+    if (!isHost) {
+        return;
+    }
+
+    // SprawdÅº czy ktoÅ› wysÅ‚aÅ‚ request o listÄ™ lobby
+    sf::Packet requestPacket;
+    sf::IpAddress senderIP;
+    unsigned short senderPort;
+
+    if (udpSocket.receive(requestPacket, senderIP, senderPort) == sf::Socket::Done) {
+        uint8_t msgType;
+        requestPacket >> msgType;
+
+        if (static_cast<MessageType>(msgType) == MessageType::LOBBY_LIST_REQUEST) {
+            std::cout << "[NetworkManager] Otrzymano request od " << senderIP << "\n";
+
+            // WyÅ›lij informacjÄ™ o naszym lobby
+            sf::Packet responsePacket;
+            responsePacket << static_cast<uint8_t>(MessageType::LOBBY_ANNOUNCEMENT);
+            responsePacket << lobbyName;
+            responsePacket << tcpPort;
+            responsePacket << getPlayerCount();
+
+            // WyÅ›lij odpowiedÅº do requestera
+            if (udpSocket.send(responsePacket, senderIP, senderPort) == sf::Socket::Done) {
+                std::cout << "[NetworkManager] WysÅ‚ano info o lobby do " << senderIP << "\n";
+            }
+            else {
+                std::cout << "[NetworkManager ERROR] Nie udaÅ‚o siÄ™ wysÅ‚aÄ‡ odpowiedzi\n";
+            }
+        }
+    }
 }

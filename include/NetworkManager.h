@@ -122,4 +122,7 @@ public:
 
     // Pomocnicza funkcja do wysy³ania/odbierania pakietów
     bool receivePacket(sf::Packet& packet);
+
+    // Host odpowiada na broadcast requesty
+    void respondToBroadcastRequests();
 };

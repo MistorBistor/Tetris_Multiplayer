@@ -75,6 +75,14 @@ void GameEngine::run() {
 
       handleEvents();
 
+      // Host odpowiada na requesty nawet gdy jest w menu lobby
+      if (gameState == GameState::Menu &&
+          mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY &&
+          networkManager.isHosting()) {
+          networkManager.respondToBroadcastRequests();
+          networkManager.listenForClient();
+      }
+
       if (gameState == GameState::Playing) {
           update(deltaTime);
       }
@@ -1902,6 +1910,11 @@ void GameEngine::updateMultiplayer(float deltaTime) {
         }
 
         return;
+    }
+
+    // Host odpowiada na broadcast requesty gdy jest w lobby
+    if (networkManager.isHosting() && mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY) {
+        networkManager.respondToBroadcastRequests();
     }
 
     // Nasłuchuj na połączenia (jeśli jesteśmy hostem w lobby)
