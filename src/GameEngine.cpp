@@ -267,7 +267,6 @@ void GameEngine::handleEvents() {
                         sfxMenu.play();
                     }
                 }
-
             }
 
             if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
@@ -303,86 +302,102 @@ void GameEngine::handleEvents() {
                     }
                 }
 
-                continue;
-            }
-
-            // PLAYING
-            if (gameState == GameState::Playing) {
-                if (event.type == sf::Event::KeyPressed) {
-                    if (event.key.code == sf::Keyboard::Escape) {
-                        std::cout << "[GameEngine] Pause -> Menu\n";
-                        mainMenu.setState(MenuState::PAUSE);
-                        gameState = GameState::Menu;
-
-                        backgroundMusic.pause();
+                if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+                    int clickResult = mainMenu.checkDifficultyClick(
+                        static_cast<float>(event.mouseButton.x),
+                        static_cast<float>(event.mouseButton.y));
+                    if (clickResult == 1) {
+                        handleMenuSelection();
                     }
-                    else {
-                        if (board.isLineClearAnimating()) {
-                            continue;
-                        }
-
-                        handleKeyPress(event.key.code);
-                    }
-                }
-            }
-
-            // MULTIPLAYER PLAYING
-            if (gameState == GameState::MultiplayerPlaying) {
-                if (event.type == sf::Event::KeyPressed) {
-                    if (event.key.code == sf::Keyboard::Escape) {
-                        std::cout << "[Multiplayer] Quit -> Menu\n";
-                        networkManager.disconnect();
-                        isMultiplayerMode = false;
+                    else if (clickResult == 2) {
                         mainMenu.setState(MenuState::MAIN_MENU);
-                        gameState = GameState::Menu;
-                        backgroundMusic.pause();
-                    }
-                    else {
-                        if (board.isLineClearAnimating()) {
-                            continue;
-                        }
-                        handleKeyPress(event.key.code);
                     }
                 }
+                else {
+                    handleMenuSelection();
+                }
+                sfxMenu.play();
             }
 
-            // GAME OVER
-            if (gameState == GameState::GameOver || gameState == GameState::MultiplayerGameOver) {
-                // Obsługa multiplayer game over - tylko przycisk Main Menu
-                if (gameState == GameState::MultiplayerGameOver) {
-                    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) {
+            continue;  // ← WAŻNE: continue dla całego Menu
+        }  // ← ZAMKNIJ BLOK MENU TUTAJ
+
+        // PLAYING
+        if (gameState == GameState::Playing) {
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Escape) {
+                    std::cout << "[GameEngine] Pause -> Menu\n";
+                    mainMenu.setState(MenuState::PAUSE);
+                    gameState = GameState::Menu;
+                    backgroundMusic.pause();
+                }
+                else {
+                    if (board.isLineClearAnimating()) {
+                        continue;
+                    }
+                    handleKeyPress(event.key.code);
+                }
+            }
+        }
+
+        // MULTIPLAYER PLAYING
+        if (gameState == GameState::MultiplayerPlaying) {
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Escape) {
+                    std::cout << "[Multiplayer] Quit -> Menu\n";
+                    networkManager.disconnect();
+                    isMultiplayerMode = false;
+                    mainMenu.setState(MenuState::MAIN_MENU);
+                    gameState = GameState::Menu;
+                    backgroundMusic.pause();
+                }
+                else {
+                    if (board.isLineClearAnimating()) {
+                        continue;
+                    }
+                    handleKeyPress(event.key.code);
+                }
+            }
+        }
+
+        // GAME OVER
+        if (gameState == GameState::GameOver || gameState == GameState::MultiplayerGameOver) {
+            // Obsługa multiplayer game over - tylko przycisk Main Menu
+            if (gameState == GameState::MultiplayerGameOver) {
+                if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) {
+                    networkManager.disconnect();
+                    isMultiplayerMode = false;
+                    opponentDisconnected = false;  // DODAJ RESET
+                    board.reset();
+                    score.reset();
+                    mainMenu.setState(MenuState::MAIN_MENU);
+                    gameState = GameState::Menu;
+                }
+
+                if (event.type == sf::Event::MouseButtonPressed) {
+                    sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
+                        static_cast<float>(event.mouseButton.y));
+                    sf::FloatRect menuBounds(300.f, 450.f, 200.f, 50.f);
+
+                    if (menuBounds.contains(mousePos)) {
                         networkManager.disconnect();
                         isMultiplayerMode = false;
+                        opponentDisconnected = false;  // DODAJ RESET
                         board.reset();
                         score.reset();
                         mainMenu.setState(MenuState::MAIN_MENU);
                         gameState = GameState::Menu;
+                        sfxMenu.play();
                     }
-
-                    if (event.type == sf::Event::MouseButtonPressed) {
-                        sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
-                            static_cast<float>(event.mouseButton.y));
-                        sf::FloatRect menuBounds(300.f, 450.f, 200.f, 50.f);
-
-                        if (menuBounds.contains(mousePos)) {
-                            networkManager.disconnect();
-                            isMultiplayerMode = false;
-                            board.reset();
-                            score.reset();
-                            mainMenu.setState(MenuState::MAIN_MENU);
-                            gameState = GameState::Menu;
-                            sfxMenu.play();
-                        }
-                    }
-                    continue;
                 }
-
-                // Reszta istniejącego kodu dla normalnego game over
-                handleGameOverInput(event);
                 continue;
             }
+
+            // Reszta istniejącego kodu dla normalnego game over
+            handleGameOverInput(event);
+            continue;
         }
-    }
+    }  // ← koniec window.pollEvent
 }
 
 void GameEngine::update(float deltaTime) {

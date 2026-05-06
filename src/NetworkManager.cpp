@@ -338,8 +338,6 @@ void NetworkManager::disconnect() {
     udpSocket.unbind();
 }
 
-// === PRYWATNE ===
-
 bool NetworkManager::sendPacket(sf::Packet& packet) {
     if (playerSocket.send(packet) != sf::Socket::Done) {
         std::cout << "[NetworkManager ERROR] Błąd wysyłania pakietu\n";
@@ -371,33 +369,44 @@ void NetworkManager::respondToBroadcastRequests() {
     sf::IpAddress senderIP;
     unsigned short senderPort;
 
+    // DEBUG
+    static int checkCount = 0;
+    checkCount++;
+    if (checkCount % 100 == 0) {  // Co 100 sprawdzeń
+        std::cout << "[NetworkManager] Czekam na requesty... (sprawdzenie " << checkCount << ")\n";
+    }
+
     if (udpSocket.receive(requestPacket, senderIP, senderPort) == sf::Socket::Done) {
         uint8_t msgType;
         requestPacket >> msgType;
 
+        std::cout << "[NetworkManager] !!!! OTRZYMANO PAKIET od " << senderIP << ":" << senderPort
+            << " typ=" << (int)msgType << "\n";
+
         if (static_cast<MessageType>(msgType) == MessageType::LOBBY_LIST_REQUEST) {
-            std::cout << "[NetworkManager] Otrzymano request od " << senderIP << "\n";
+            std::cout << "[NetworkManager] Otrzymano REQUEST od " << senderIP << "\n";
 
             // Wyślij informację o naszym lobby
             sf::Packet responsePacket;
             responsePacket << static_cast<uint8_t>(MessageType::LOBBY_ANNOUNCEMENT);
 
-            // sf::Packet obsługuje std::string z length prefix automatycznie
             std::string safeName = lobbyName;
             if (safeName.empty()) {
                 safeName = "Unnamed";
             }
             responsePacket << safeName;
-
             responsePacket << tcpPort;
             responsePacket << static_cast<sf::Int32>(getPlayerCount());
 
+            std::cout << "[NetworkManager] Wysyłam odpowiedź do " << senderIP << ":" << senderPort << "\n";
+            std::cout << "[NetworkManager]   Nazwa: '" << safeName << "', Port: " << tcpPort
+                << ", Gracze: " << getPlayerCount() << "\n";
+
             if (udpSocket.send(responsePacket, senderIP, senderPort) == sf::Socket::Done) {
-                std::cout << "[NetworkManager] Wysłano info o lobby '" << safeName
-                    << "' do " << senderIP << "\n";
+                std::cout << "[NetworkManager] ✓ Wysłano pomyślnie\n";
             }
             else {
-                std::cout << "[NetworkManager ERROR] Nie udało się wysłać odpowiedzi\n";
+                std::cout << "[NetworkManager] ✗ Błąd wysyłania\n";
             }
         }
     }
