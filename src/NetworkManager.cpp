@@ -31,13 +31,20 @@ bool NetworkManager::createLobby(const std::string& name) {
     std::cout << "[NetworkManager] Lobby stworzone na porcie " << tcpPort
         << "\n";
 
-    // Bind UDP socket do broadcastowania
+    // Bind UDP socket do broadcastowania - spróbuj bind na BROADCAST_PORT
+    // Jeśli zajęty, użyj AnyPort
     if (udpSocket.bind(BROADCAST_PORT) != sf::Socket::Done) {
-        std::cout << "[NetworkManager ERROR] Nie można zbindować UDP\n";
-        return false;
+        std::cout << "[NetworkManager] Port " << BROADCAST_PORT << " zajęty, próba z AnyPort\n";
+        if (udpSocket.bind(sf::Socket::AnyPort) != sf::Socket::Done) {
+            std::cout << "[NetworkManager ERROR] Nie można zbindować UDP\n";
+            return false;
+        }
     }
 
     udpSocket.setBlocking(false);
+
+    std::cout << "[NetworkManager] UDP socket zbindowany na porcie "
+        << udpSocket.getLocalPort() << "\n";
 
     return true;
 }
@@ -93,10 +100,8 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
     sf::Packet requestPacket;
     requestPacket << static_cast<uint8_t>(MessageType::LOBBY_LIST_REQUEST);
 
-    // DODAJ DEBUG ↓↓↓
     std::cout << "[NetworkManager] Mój IP: " << sf::IpAddress::getLocalAddress() << "\n";
     std::cout << "[NetworkManager] Port wyszukiwania: " << searchSocket.getLocalPort() << "\n";
-    // ↑↑↑ KONIEC DEBUG
 
     // Broadcast do całej sieci lokalnej
     if (searchSocket.send(requestPacket, sf::IpAddress::Broadcast, BROADCAST_PORT) != sf::Socket::Done) {
@@ -115,7 +120,6 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
 
         sf::Socket::Status status = searchSocket.receive(responsePacket, senderIP, senderPort);
 
-        // DODAJ DEBUG ↓↓↓
         if (status == sf::Socket::Error) {
             std::cout << "[NetworkManager] Błąd odbierania pakietu\n";
         }
@@ -125,7 +129,6 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
         else if (status == sf::Socket::Disconnected) {
             std::cout << "[NetworkManager] Socket disconnected\n";
         }
-        // ↑↑↑ KONIEC DEBUG
 
         if (status == sf::Socket::Done) {
             uint8_t msgType;
@@ -138,7 +141,7 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
                 // Odebrano ogłoszenie lobby
                 std::string name;
                 unsigned short tcpPort;
-                int playerCount;
+                sf::Int32 playerCount;
 
                 responsePacket >> name >> tcpPort >> playerCount;
 
@@ -158,6 +161,8 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
     std::cout << "[NetworkManager] Znaleziono " << lobbies.size() << " lobby\n";
     return lobbies;
 }
+
+
 
 bool NetworkManager::joinLobby(const LobbyInfo& lobby) {
     std::cout << "[NetworkManager] Łączenie z lobby: " << lobby.name << " ("
@@ -182,8 +187,7 @@ bool NetworkManager::joinLobby(const LobbyInfo& lobby) {
 
 // === WSPÓLNE ===
 
-void NetworkManager::sendBoardState(
-    const std::vector<std::vector<int>>& boardData) {
+void NetworkManager::sendBoardState(const std::vector<std::vector<int>>& boardData) {
     if (!connected) {
         return;
     }
@@ -205,8 +209,7 @@ void NetworkManager::sendBoardState(
     sendPacket(packet);
 }
 
-bool NetworkManager::receiveBoardState(
-    std::vector<std::vector<int>>& outBoardData) {
+bool NetworkManager::receiveBoardState(std::vector<std::vector<int>>& outBoardData) {
     if (!connected) {
         return false;
     }
@@ -358,12 +361,12 @@ bool NetworkManager::receivePacket(sf::Packet& packet) {
 
     return false;
 }
+
 void NetworkManager::respondToBroadcastRequests() {
     if (!isHost) {
         return;
     }
 
-    // Sprawdź czy ktoś wysłał request o listę lobby
     sf::Packet requestPacket;
     sf::IpAddress senderIP;
     unsigned short senderPort;
@@ -378,13 +381,20 @@ void NetworkManager::respondToBroadcastRequests() {
             // Wyślij informację o naszym lobby
             sf::Packet responsePacket;
             responsePacket << static_cast<uint8_t>(MessageType::LOBBY_ANNOUNCEMENT);
-            responsePacket << lobbyName;
-            responsePacket << tcpPort;
-            responsePacket << getPlayerCount();
 
-            // Wyślij odpowiedź do requestera
+            // sf::Packet obsługuje std::string z length prefix automatycznie
+            std::string safeName = lobbyName;
+            if (safeName.empty()) {
+                safeName = "Unnamed";
+            }
+            responsePacket << safeName;
+
+            responsePacket << tcpPort;
+            responsePacket << static_cast<sf::Int32>(getPlayerCount());
+
             if (udpSocket.send(responsePacket, senderIP, senderPort) == sf::Socket::Done) {
-                std::cout << "[NetworkManager] Wysłano info o lobby do " << senderIP << "\n";
+                std::cout << "[NetworkManager] Wysłano info o lobby '" << safeName
+                    << "' do " << senderIP << "\n";
             }
             else {
                 std::cout << "[NetworkManager ERROR] Nie udało się wysłać odpowiedzi\n";

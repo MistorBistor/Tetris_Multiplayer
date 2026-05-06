@@ -94,253 +94,295 @@ void GameEngine::run() {
 }
 
 void GameEngine::handleEvents() {
-  sf::Event event;
-  while (window.pollEvent(event)) {
-    if (event.type == sf::Event::Closed) {
-      std::cout << "[GameEngine] Window closed\n";
-      window.close();
-      return;
-    }
-
-    // OBSŁUGA KONTROLERA
-    if (event.type == sf::Event::JoystickButtonPressed) {
-      if (gameState == GameState::Menu) {
-        handleControllerButtonMenu(event.joystickButton.button);
-      } else if (gameState == GameState::Playing) {
-        handleControllerButton(event.joystickButton.button);
-      } else if (gameState == GameState::GameOver) {
-        // Obsługa kontrolera w Game Over
-        if (event.joystickButton.button == 0) { // A - Potwierdź
-          if (selectedGameOverElement == 1) {   // Confirm
-            saveHighScore();
-            board.reset();
-            mainMenu.setState(MenuState::MAIN_MENU);
-            gameState = GameState::Menu;
-          } else if (selectedGameOverElement == 2) { // Main Menu
-            board.reset();
-            mainMenu.setState(MenuState::MAIN_MENU);
-            gameState = GameState::Menu;
-          } else if (selectedGameOverElement == 0) { // Input field
-            isTypingName = !isTypingName;
-          }
-          sfxMenu.play();
+    sf::Event event;
+    while (window.pollEvent(event)) {
+        if (event.type == sf::Event::Closed) {
+            std::cout << "[GameEngine] Window closed\n";
+            window.close();
+            return;
         }
-      }
-    }
 
-    if (event.type == sf::Event::JoystickMoved) {
-      if (gameState == GameState::Menu) {
-        handleControllerAxisMenu(event.joystickMove.axis,
-                                 event.joystickMove.position);
-      } else if (gameState == GameState::Playing) {
-        handleControllerAxis(event.joystickMove.axis,
-                             event.joystickMove.position);
-      } else if (gameState == GameState::GameOver) {
-        // Nawigacja kontrolerem w Game Over
-        static bool upPressed = false;
-        static bool downPressed = false;
-        const float threshold = 50.0f;
-
-        if (event.joystickMove.axis == sf::Joystick::PovY) {
-          if (event.joystickMove.position > threshold && !upPressed) {
-            selectedGameOverElement--;
-            if (selectedGameOverElement < 0)
-              selectedGameOverElement = 2;
-            sfxMenu.play();
-            upPressed = true;
-          } else if (event.joystickMove.position < -threshold && !downPressed) {
-            selectedGameOverElement++;
-            if (selectedGameOverElement > 2)
-              selectedGameOverElement = 0;
-            sfxMenu.play();
-            downPressed = true;
-          } else if (event.joystickMove.position > -threshold &&
-                     event.joystickMove.position < threshold) {
-            upPressed = false;
-            downPressed = false;
-          }
-        }
-      }
-    }
-
-    if (gameState == GameState::Menu) {
-
-        //Obsługa wpisywania nazwy lobby
-        if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST &&
-            mainMenu.isTypingName() &&
-            event.type == sf::Event::TextEntered) {
-
-            if (event.text.unicode == '\b') {  // Backspace
-                mainMenu.removeCharFromLobbyName();
+        // OBSŁUGA KONTROLERA
+        if (event.type == sf::Event::JoystickButtonPressed) {
+            if (gameState == GameState::Menu) {
+                handleControllerButtonMenu(event.joystickButton.button);
             }
-            else if (event.text.unicode == '\r' || event.text.unicode == '\n') {  // Enter
-                mainMenu.setTypingLobbyName(false);
+            else if (gameState == GameState::Playing) {
+                handleControllerButton(event.joystickButton.button);
             }
-            else if (event.text.unicode < 128 && event.text.unicode >= 32) {
-                char c = static_cast<char>(event.text.unicode);
-                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-                    (c >= '0' && c <= '9') || c == ' ' || c == '_') {
-                    mainMenu.addCharToLobbyName(c);
-                }
-            }
-            continue;
-        }
-
-      mainMenu.handleEvent(event);
-
-      if (event.type == sf::Event::KeyPressed) {
-        if (event.key.code == sf::Keyboard::Up) {
-          mainMenu.moveUp();
-          sfxMenu.play();
-        } else if (event.key.code == sf::Keyboard::Down) {
-          mainMenu.moveDown();
-          sfxMenu.play();
-        } else if (event.key.code == sf::Keyboard::Left) {
-          if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-            mainMenu.decreaseDifficulty();
-            sfxMenu.play();
-          }
-        } else if (event.key.code == sf::Keyboard::Right) {
-          if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-            mainMenu.increaseDifficulty();
-            sfxMenu.play();
-          }
-        } else if (event.key.code == sf::Keyboard::Escape) {
-          if (mainMenu.getState() == MenuState::HIGH_SCORES ||
-              mainMenu.getState() == MenuState::SETTINGS ||
-              mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-            mainMenu.setState(MenuState::MAIN_MENU);
-            sfxMenu.play();
-          }
-        } else if (event.key.code == sf::Keyboard::Enter) {
-          if (mainMenu.getState() == MenuState::HIGH_SCORES) {
-            mainMenu.setState(MenuState::MAIN_MENU);
-          } else {
-            handleMenuSelection();
-          }
-          sfxMenu.play();
-        }
-        else if (event.key.code == sf::Keyboard::R) {
-            if (mainMenu.getState() == MenuState::MULTIPLAYER_JOIN) {
-                std::cout << "[Menu] Odświeżanie listy lobby...\n";
-                std::vector<LobbyInfo> lobbies = networkManager.searchLobbies(2.0f);
-                mainMenu.setAvailableLobbies(lobbies);
-                sfxMenu.play();
-            }
-        }
-
-      }
-
-      if (event.type == sf::Event::MouseButtonPressed &&
-          event.mouseButton.button == sf::Mouse::Left) {
-
-          // Obsługa kliknięcia w input box w MULTIPLAYER_HOST
-          if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST) {
-              sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
-                  static_cast<float>(event.mouseButton.y));
-
-              // Input box bounds (te same co w renderMultiplayerHost)
-              sf::FloatRect inputBox(200.f, 320.f, 400.f, 50.f);
-
-              if (inputBox.contains(mousePos)) {
-                  mainMenu.setTypingLobbyName(true);
-                  sfxMenu.play();
-              }
-          }
-
-        if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
-          int clickResult = mainMenu.checkDifficultyClick(
-              static_cast<float>(event.mouseButton.x),
-              static_cast<float>(event.mouseButton.y));
-          if (clickResult == 1) {
-            handleMenuSelection();
-          } else if (clickResult == 2) {
-            mainMenu.setState(MenuState::MAIN_MENU);
-          }
-        } else {
-          handleMenuSelection();
-        }
-        sfxMenu.play();
-      }
-
-      continue;
-    }
-
-    // PLAYING
-    if (gameState == GameState::Playing) {
-      if (event.type == sf::Event::KeyPressed) {
-        if (event.key.code == sf::Keyboard::Escape) {
-          std::cout << "[GameEngine] Pause -> Menu\n";
-          mainMenu.setState(MenuState::PAUSE);
-          gameState = GameState::Menu;
-
-          backgroundMusic.pause();
-        } else {
-          if (board.isLineClearAnimating()) {
-            continue;
-          }
-
-          handleKeyPress(event.key.code);
-        }
-      }
-    }
-
-    // MULTIPLAYER PLAYING
-    if (gameState == GameState::MultiplayerPlaying) {
-        if (event.type == sf::Event::KeyPressed) {
-            if (event.key.code == sf::Keyboard::Escape) {
-                std::cout << "[Multiplayer] Quit -> Menu\n";
-                networkManager.disconnect();
-                isMultiplayerMode = false;
-                mainMenu.setState(MenuState::MAIN_MENU);
-                gameState = GameState::Menu;
-                backgroundMusic.pause();
-            }
-            else {
-                if (board.isLineClearAnimating()) {
-                    continue;
-                }
-                handleKeyPress(event.key.code);
-            }
-        }
-    }
-
-    // GAME OVER
-    if (gameState == GameState::GameOver || gameState == GameState::MultiplayerGameOver) {
-        // Obsługa multiplayer game over - tylko przycisk Main Menu
-        if (gameState == GameState::MultiplayerGameOver) {
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) {
-                networkManager.disconnect();
-                isMultiplayerMode = false;
-                board.reset();
-                score.reset();
-                mainMenu.setState(MenuState::MAIN_MENU);
-                gameState = GameState::Menu;
-            }
-
-            if (event.type == sf::Event::MouseButtonPressed) {
-                sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
-                    static_cast<float>(event.mouseButton.y));
-                sf::FloatRect menuBounds(300.f, 450.f, 200.f, 50.f);
-
-                if (menuBounds.contains(mousePos)) {
-                    networkManager.disconnect();
-                    isMultiplayerMode = false;
-                    board.reset();
-                    score.reset();
-                    mainMenu.setState(MenuState::MAIN_MENU);
-                    gameState = GameState::Menu;
+            else if (gameState == GameState::GameOver) {
+                // Obsługa kontrolera w Game Over
+                if (event.joystickButton.button == 0) { // A - Potwierdź
+                    if (selectedGameOverElement == 1) {   // Confirm
+                        saveHighScore();
+                        board.reset();
+                        mainMenu.setState(MenuState::MAIN_MENU);
+                        gameState = GameState::Menu;
+                    }
+                    else if (selectedGameOverElement == 2) { // Main Menu
+                        board.reset();
+                        mainMenu.setState(MenuState::MAIN_MENU);
+                        gameState = GameState::Menu;
+                    }
+                    else if (selectedGameOverElement == 0) { // Input field
+                        isTypingName = !isTypingName;
+                    }
                     sfxMenu.play();
                 }
             }
-            continue;
         }
 
-        // Reszta istniejącego kodu dla normalnego game over
-        handleGameOverInput(event);
-        continue;
+        if (event.type == sf::Event::JoystickMoved) {
+            if (gameState == GameState::Menu) {
+                handleControllerAxisMenu(event.joystickMove.axis,
+                    event.joystickMove.position);
+            }
+            else if (gameState == GameState::Playing) {
+                handleControllerAxis(event.joystickMove.axis,
+                    event.joystickMove.position);
+            }
+            else if (gameState == GameState::GameOver) {
+                // Nawigacja kontrolerem w Game Over
+                static bool upPressed = false;
+                static bool downPressed = false;
+                const float threshold = 50.0f;
+
+                if (event.joystickMove.axis == sf::Joystick::PovY) {
+                    if (event.joystickMove.position > threshold && !upPressed) {
+                        selectedGameOverElement--;
+                        if (selectedGameOverElement < 0)
+                            selectedGameOverElement = 2;
+                        sfxMenu.play();
+                        upPressed = true;
+                    }
+                    else if (event.joystickMove.position < -threshold && !downPressed) {
+                        selectedGameOverElement++;
+                        if (selectedGameOverElement > 2)
+                            selectedGameOverElement = 0;
+                        sfxMenu.play();
+                        downPressed = true;
+                    }
+                    else if (event.joystickMove.position > -threshold &&
+                        event.joystickMove.position < threshold) {
+                        upPressed = false;
+                        downPressed = false;
+                    }
+                }
+            }
+        }
+
+        if (gameState == GameState::Menu) {
+
+            //Obsługa wpisywania nazwy lobby
+            if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST &&
+                mainMenu.isTypingName() &&
+                event.type == sf::Event::TextEntered) {
+
+                if (event.text.unicode == '\b') {  // Backspace
+                    mainMenu.removeCharFromLobbyName();
+                }
+                else if (event.text.unicode == '\r' || event.text.unicode == '\n') {  // Enter
+                    mainMenu.setTypingLobbyName(false);
+                }
+                else if (event.text.unicode < 128 && event.text.unicode >= 32) {
+                    char c = static_cast<char>(event.text.unicode);
+                    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                        (c >= '0' && c <= '9') || c == ' ' || c == '_') {
+                        mainMenu.addCharToLobbyName(c);
+                    }
+                }
+                continue;
+            }
+
+            mainMenu.handleEvent(event);
+
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Up) {
+                    // W ekranie HOST nie zmieniamy wyboru gdy wpisujemy tekst
+                    if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST &&
+                        mainMenu.isTypingName()) {
+                        // Ignoruj strzałki podczas wpisywania
+                    }
+                    else {
+                        mainMenu.moveUp();
+                        sfxMenu.play();
+                    }
+                }
+                else if (event.key.code == sf::Keyboard::Down) {
+                    if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST &&
+                        mainMenu.isTypingName()) {
+                        // Ignoruj strzałki podczas wpisywania
+                    }
+                    else {
+                        mainMenu.moveDown();
+                        sfxMenu.play();
+                    }
+                }
+                else if (event.key.code == sf::Keyboard::Left) {
+                    if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+                        mainMenu.decreaseDifficulty();
+                        sfxMenu.play();
+                    }
+                }
+                else if (event.key.code == sf::Keyboard::Right) {
+                    if (mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+                        mainMenu.increaseDifficulty();
+                        sfxMenu.play();
+                    }
+                }
+                else if (event.key.code == sf::Keyboard::Escape) {
+                    if (mainMenu.getState() == MenuState::HIGH_SCORES ||
+                        mainMenu.getState() == MenuState::SETTINGS ||
+                        mainMenu.getState() == MenuState::DIFFICULTY_SELECTION) {
+                        mainMenu.setState(MenuState::MAIN_MENU);
+                        sfxMenu.play();
+                    }
+                }
+                else if (event.key.code == sf::Keyboard::Enter) {
+                    if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST) {
+                        // Obsługa Enter w ekranie tworzenia lobby
+                        if (mainMenu.isTypingName()) {
+                            // Jeśli wpisujemy nazwę, Enter kończy wpisywanie
+                            mainMenu.setTypingLobbyName(false);
+                        }
+                        else {
+                            // Jeśli nie wpisujemy, Enter wybiera opcję
+                            handleMenuSelection();
+                        }
+                        sfxMenu.play();
+                    }
+                    else if (mainMenu.getState() == MenuState::HIGH_SCORES) {
+                        mainMenu.setState(MenuState::MAIN_MENU);
+                    }
+                    else {
+                        handleMenuSelection();
+                    }
+                    sfxMenu.play();
+                }
+                else if (event.key.code == sf::Keyboard::R) {
+                    if (mainMenu.getState() == MenuState::MULTIPLAYER_JOIN) {
+                        std::cout << "[Menu] Odświeżanie listy lobby...\n";
+                        std::vector<LobbyInfo> lobbies = networkManager.searchLobbies(2.0f);
+                        mainMenu.setAvailableLobbies(lobbies);
+                        sfxMenu.play();
+                    }
+                }
+
+            }
+
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                // Obsługa kliknięcia w input box w MULTIPLAYER_HOST
+                if (mainMenu.getState() == MenuState::MULTIPLAYER_HOST) {
+                    sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
+                        static_cast<float>(event.mouseButton.y));
+
+                    // Input box bounds
+                    sf::FloatRect inputBox(200.f, 320.f, 400.f, 50.f);
+
+                    const float buttonWidth = 180.f;
+                    const float buttonHeight = 50.f;
+                    const float buttonY = 450.f;
+                    const float spacing = 40.f;
+                    const float totalWidth = buttonWidth * 2 + spacing;
+                    const float startX = 400.f - totalWidth / 2.f;
+
+                    sf::FloatRect createBtn(startX, buttonY, buttonWidth, buttonHeight);
+                    sf::FloatRect backBtn(startX + buttonWidth + spacing, buttonY, buttonWidth, buttonHeight);
+
+                    if (inputBox.contains(mousePos)) {
+                        mainMenu.setTypingLobbyName(true);
+                        sfxMenu.play();
+                    }
+                    else if (createBtn.contains(mousePos)) {
+                        handleMenuSelection();
+                        sfxMenu.play();
+                    }
+                    else if (backBtn.contains(mousePos)) {
+                        mainMenu.setState(MenuState::MULTIPLAYER_MENU);
+                        sfxMenu.play();
+                    }
+                }
+
+                continue;
+            }
+
+            // PLAYING
+            if (gameState == GameState::Playing) {
+                if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Escape) {
+                        std::cout << "[GameEngine] Pause -> Menu\n";
+                        mainMenu.setState(MenuState::PAUSE);
+                        gameState = GameState::Menu;
+
+                        backgroundMusic.pause();
+                    }
+                    else {
+                        if (board.isLineClearAnimating()) {
+                            continue;
+                        }
+
+                        handleKeyPress(event.key.code);
+                    }
+                }
+            }
+
+            // MULTIPLAYER PLAYING
+            if (gameState == GameState::MultiplayerPlaying) {
+                if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Escape) {
+                        std::cout << "[Multiplayer] Quit -> Menu\n";
+                        networkManager.disconnect();
+                        isMultiplayerMode = false;
+                        mainMenu.setState(MenuState::MAIN_MENU);
+                        gameState = GameState::Menu;
+                        backgroundMusic.pause();
+                    }
+                    else {
+                        if (board.isLineClearAnimating()) {
+                            continue;
+                        }
+                        handleKeyPress(event.key.code);
+                    }
+                }
+            }
+
+            // GAME OVER
+            if (gameState == GameState::GameOver || gameState == GameState::MultiplayerGameOver) {
+                // Obsługa multiplayer game over - tylko przycisk Main Menu
+                if (gameState == GameState::MultiplayerGameOver) {
+                    if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Enter) {
+                        networkManager.disconnect();
+                        isMultiplayerMode = false;
+                        board.reset();
+                        score.reset();
+                        mainMenu.setState(MenuState::MAIN_MENU);
+                        gameState = GameState::Menu;
+                    }
+
+                    if (event.type == sf::Event::MouseButtonPressed) {
+                        sf::Vector2f mousePos(static_cast<float>(event.mouseButton.x),
+                            static_cast<float>(event.mouseButton.y));
+                        sf::FloatRect menuBounds(300.f, 450.f, 200.f, 50.f);
+
+                        if (menuBounds.contains(mousePos)) {
+                            networkManager.disconnect();
+                            isMultiplayerMode = false;
+                            board.reset();
+                            score.reset();
+                            mainMenu.setState(MenuState::MAIN_MENU);
+                            gameState = GameState::Menu;
+                            sfxMenu.play();
+                        }
+                    }
+                    continue;
+                }
+
+                // Reszta istniejącego kodu dla normalnego game over
+                handleGameOverInput(event);
+                continue;
+            }
+        }
     }
-  }
 }
 
 void GameEngine::update(float deltaTime) {
@@ -812,6 +854,7 @@ void GameEngine::handleMenuSelection() {
                   std::cout << "[Menu] Połączono z lobby!\n";
                   isMultiplayerMode = true;
                   waitingForGameStart = true;
+                  gameState = GameState::MultiplayerPlaying;  // ZMIEŃ Z Menu NA MultiplayerPlaying
                   mainMenu.setState(MenuState::MULTIPLAYER_LOBBY);
               }
               else {
@@ -832,6 +875,14 @@ void GameEngine::handleMenuSelection() {
           board.reset();
           opponentBoard.reset();
           score.reset();
+
+          // Reset levelu
+          startLevel = 0;
+          currentLevel = 0;
+          totalLinesCleared = 0;
+          fallSpeed = getFallSpeedForLevel(0);
+          updateMusicSpeed();
+          board.updateClearAnimSpeed(0);
 
           nextQueue.clear();
           for (int i = 0; i < 5; i++) {
@@ -1887,6 +1938,13 @@ void GameEngine::updateMultiplayer(float deltaTime) {
                 opponentBoard.reset();
                 score.reset();
 
+                // DODAJ RESET LEVELU ↓↓↓
+                startLevel = 0;
+                currentLevel = 0;
+                totalLinesCleared = 0;
+                fallSpeed = getFallSpeedForLevel(0);
+                // ↑↑↑ KONIEC DODANEGO FRAGMENTU
+
                 nextQueue.clear();
                 for (int i = 0; i < 5; i++) {
                     nextQueue.push_back(nextFromBag());
@@ -1898,18 +1956,17 @@ void GameEngine::updateMultiplayer(float deltaTime) {
                 canHold = true;
                 boardSyncTimer = 0.0f;
 
-                gameState = GameState::MultiplayerPlaying;
                 spawnNewTetromino();
                 backgroundMusic.play();
             }
         }
-
-        // Nasłuchuj na połączenia (jeśli jesteśmy hostem w lobby)
-        if (networkManager.isHosting() && !networkManager.isConnected()) {
-            networkManager.listenForClient();
-        }
-
         return;
+    }
+
+    // Nasłuchuj na połączenia (jeśli jesteśmy hostem w lobby)
+    if (networkManager.isHosting() && !networkManager.isConnected() &&
+        mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY) {
+        networkManager.listenForClient();
     }
 
     // Host odpowiada na broadcast requesty gdy jest w lobby
