@@ -12,7 +12,8 @@ ColorTheme CLASSIC_THEME{
     sf::Color::Green,      // S
     sf::Color::Red,        // Z
     sf::Color::Blue,       // J
-    sf::Color(255, 165, 0) // L
+    sf::Color(255, 165, 0), // L
+    sf::Color(120, 120, 120) // P 
 };
 
 ColorTheme DARK_THEME{
@@ -27,7 +28,8 @@ ColorTheme DARK_THEME{
     sf::Color(90, 215, 150),  // S  miêtowy
     sf::Color(255, 95, 120),  // Z  malinowy
     sf::Color(95, 120, 255),  // J  granatowo-niebieski
-    sf::Color(255, 155, 80)   // L  pomarañcz
+    sf::Color(255, 155, 80),   // L  pomarañcz
+    sf::Color(120, 120, 120) // P 
 };
 
 ColorTheme NEON_THEME{
@@ -42,5 +44,6 @@ ColorTheme NEON_THEME{
     sf::Color(0, 255, 90),  // S  neon green
     sf::Color(255, 40, 0),  // Z  neon red-orange
     sf::Color(0, 140, 255), // J  neon blue
-    sf::Color(255, 120, 0)  // L  neon orange
+    sf::Color(255, 120, 0),  // L  neon orange
+    sf::Color(120, 120, 120) // P 
 };

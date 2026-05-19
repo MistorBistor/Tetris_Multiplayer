@@ -5,6 +5,7 @@
 #include "Score.h"
 #include "Tetromino.h"
 #include "TetrominoType.h"
+#include "NetworkManager.h"
 #include <SFML/Audio.hpp>
 #include <SFML/Graphics.hpp>
 #include <algorithm>
@@ -19,7 +20,14 @@ private:
   Menu mainMenu;
   Score score;
 
-  enum class GameState { Menu, Playing, Paused, GameOver };
+  enum class GameState {
+      Menu,
+      Playing,
+      Paused,
+      GameOver,
+      MultiplayerPlaying,    // Rozgrywka multiplayer
+      MultiplayerGameOver    // Koniec gry multiplayer
+  };
   GameState gameState = GameState::Menu;
   bool isRunning = false;
 
@@ -128,6 +136,31 @@ private:
   ColorTheme currentTheme;
 
   void applyTheme(ColorThemeType type);
+
+  // Multiplayer
+  NetworkManager networkManager;
+  bool isMultiplayerMode;
+  Board opponentBoard;  // Plansza przeciwnika (do wyœwietlania)
+
+  // Timer do synchronizacji planszy
+  float boardSyncTimer;
+  const float boardSyncInterval = 0.1f;  // Co 100ms wysy³aj stan planszy
+
+  // Flagi multiplayer
+  bool waitingForGameStart;  // Czy klient czeka na sygna³ START od hosta
+  bool opponentDisconnected;
+  std::string disconnectReason;
+
+  // Obs³uga multiplayer
+  void handleMultiplayerMenuActions();
+  void updateMultiplayer(float deltaTime);
+  void renderMultiplayer();
+  void handleMultiplayerInput(sf::Event& event);
+  void sendAttackToOpponent(int linesCleared);
+  void checkForIncomingAttacks();
+  void syncBoardWithOpponent();
+  void handleOpponentGameOver();
+  void renderOpponentBoard(sf::RenderWindow& window) const;
 
 public:
   GameEngine();

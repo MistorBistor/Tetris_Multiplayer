@@ -18,6 +18,7 @@ struct ColorTheme {
   sf::Color Z;
   sf::Color J;
   sf::Color L;
+  sf::Color P;
 };
 
 extern ColorTheme CLASSIC_THEME;
