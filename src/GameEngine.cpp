@@ -75,12 +75,59 @@ void GameEngine::run() {
 
       handleEvents();
 
+      // Klient czekający na start również musi sprawdzać pakiety
+      if (isMultiplayerMode && waitingForGameStart && gameState == GameState::Menu && mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY) {
+          // Sprawdź czy host wysłał START
+          sf::Packet packet;
+          if (networkManager.receivePacket(packet)) {
+              uint8_t msgType;
+              packet >> msgType;
+
+              if (static_cast<MessageType>(msgType) == MessageType::GAME_START) {
+                  std::cout << "[Multiplayer] Otrzymano START w run()\n";
+                  waitingForGameStart = false;
+
+                  // Zainicjuj grę
+                  board.reset();
+                  opponentBoard.reset();
+                  score.reset();
+
+                  startLevel = 0;
+                  currentLevel = 0;
+                  totalLinesCleared = 0;
+                  fallSpeed = getFallSpeedForLevel(0);
+                  updateMusicSpeed();
+                  board.updateClearAnimSpeed(0);
+
+                  nextQueue.clear();
+                  for (int i = 0; i < 5; i++) {
+                      nextQueue.push_back(nextFromBag());
+                  }
+
+                  gameTimeSec = 0.0f;
+                  score.setGameTimeSeconds(0.0f);
+                  heldTetrominoType = TetrominoType::Empty;
+                  hasHeldPiece = false;
+                  canHold = true;
+                  boardSyncTimer = 0.0f;
+
+                  gameState = GameState::MultiplayerPlaying;
+                  spawnNewTetromino();
+                  backgroundMusic.play();
+              }
+          }
+      }
+
       // Host odpowiada na requesty nawet gdy jest w menu lobby
-      if (gameState == GameState::Menu &&
-          mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY &&
-          networkManager.isHosting()) {
+      if (gameState == GameState::Menu && mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY && networkManager.isHosting()) {
           networkManager.respondToBroadcastRequests();
           networkManager.listenForClient();
+      }
+
+      // Gra multiplayer idzie dalej nawet podczas pauzy
+      if (gameState == GameState::Menu &&
+          mainMenu.getState() == MenuState::MULTIPLAYER_PAUSE) {
+          updateMultiplayer(deltaTime);
       }
 
       if (gameState == GameState::Playing) {
@@ -96,6 +143,12 @@ void GameEngine::run() {
 void GameEngine::handleEvents() {
     sf::Event event;
     while (window.pollEvent(event)) {
+
+        // Ignoruj wszystkie eventy myszy gdy okno nie ma focusu
+        if ((event.type == sf::Event::MouseButtonPressed || event.type == sf::Event::MouseButtonReleased || event.type == sf::Event::MouseMoved) && !window.hasFocus()) {
+            continue;  // Pomiń ten event całkowicie
+        }
+
         if (event.type == sf::Event::Closed) {
             std::cout << "[GameEngine] Window closed\n";
             window.close();
@@ -344,12 +397,9 @@ void GameEngine::handleEvents() {
         if (gameState == GameState::MultiplayerPlaying) {
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::Escape) {
-                    std::cout << "[Multiplayer] Quit -> Menu\n";
-                    networkManager.disconnect();
-                    isMultiplayerMode = false;
-                    mainMenu.setState(MenuState::MAIN_MENU);
+                    std::cout << "[Multiplayer] Pause (game continues)\n";
+                    mainMenu.setState(MenuState::MULTIPLAYER_PAUSE);
                     gameState = GameState::Menu;
-                    backgroundMusic.pause();
                 }
                 else {
                     if (board.isLineClearAnimating()) {
@@ -534,8 +584,14 @@ void GameEngine::render() {
     window.clear(currentTheme.background);
 
     if (gameState == GameState::Menu) {
-        //Specjalne renderowanie dla lobby screen
-        if (mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY) {
+        // DODAJ sprawdzenie dla MULTIPLAYER_PAUSE ↓↓↓
+        if (mainMenu.getState() == MenuState::MULTIPLAYER_PAUSE) {
+            // Renderuj grę w tle
+            renderMultiplayer();
+            // Renderuj półprzeźroczyste menu na wierzchu
+            mainMenu.renderMultiplayerPause(window);
+        }
+        else if (mainMenu.getState() == MenuState::MULTIPLAYER_LOBBY) {
             mainMenu.renderMultiplayerLobby(window,
                 networkManager.getPlayerCount(),
                 networkManager.getLobbyName());
@@ -750,7 +806,7 @@ void GameEngine::handleMenuSelection() {
     fallSpeed = mainMenu.getDifficultySpeed();
     startLevel = mainMenu.getSelectedDifficulty();
     currentLevel = startLevel;
-    totalLinesCleared = 0; // WAŻNE: Reset licznika linii
+    totalLinesCleared = 0; // Reset licznika linii
 
     fallSpeed = getFallSpeedForLevel(currentLevel);
     updateMusicSpeed();
@@ -781,10 +837,16 @@ void GameEngine::handleMenuSelection() {
     break;
 
   case MenuAction::RESUME:
-    std::cout << "[Menu] Resume\n";
-    gameState = GameState::Playing;
-    backgroundMusic.play();
-    break;
+      std::cout << "[Menu] Resume\n";
+
+      if (isMultiplayerMode) {
+          gameState = GameState::MultiplayerPlaying;
+      }
+      else {
+          gameState = GameState::Playing;
+          backgroundMusic.play();
+      }
+      break;
 
   case MenuAction::RESTART:
     std::cout << "[Menu] Restart\n";
@@ -796,7 +858,16 @@ void GameEngine::handleMenuSelection() {
 
   case MenuAction::MAIN_MENU:
     std::cout << "[Menu] Main menu\n";
+
+    // Jeśli jesteśmy w multiplayer, rozłącz się
+    if (isMultiplayerMode) {
+        networkManager.disconnect();
+        isMultiplayerMode = false;
+        waitingForGameStart = false;
+        opponentDisconnected = false;
+    }
     board.reset();
+    score.reset();
     mainMenu.setState(MenuState::MAIN_MENU);
     gameState = GameState::Menu;
     backgroundMusic.stop();
@@ -869,7 +940,7 @@ void GameEngine::handleMenuSelection() {
                   std::cout << "[Menu] Połączono z lobby!\n";
                   isMultiplayerMode = true;
                   waitingForGameStart = true;
-                  gameState = GameState::MultiplayerPlaying;  // ZMIEŃ Z Menu NA MultiplayerPlaying
+                  gameState = GameState::Menu;
                   mainMenu.setState(MenuState::MULTIPLAYER_LOBBY);
               }
               else {
@@ -883,6 +954,11 @@ void GameEngine::handleMenuSelection() {
   case MenuAction::START_MULTIPLAYER:
       std::cout << "[Menu] Start multiplayer game\n";
       if (networkManager.isHosting() && networkManager.isConnected()) {
+          // DODAJ: Reset flagi connected PRZED startem gry ↓↓↓
+          // (bo po grze będziemy chcieli ponownie akceptować połączenia)
+          // NIE - to psuje aktywne połączenie!
+          // ↑↑↑
+
           // Host startuje grę
           networkManager.startGame();
 
@@ -891,7 +967,6 @@ void GameEngine::handleMenuSelection() {
           opponentBoard.reset();
           score.reset();
 
-          // Reset levelu
           startLevel = 0;
           currentLevel = 0;
           totalLinesCleared = 0;
@@ -922,6 +997,7 @@ void GameEngine::handleMenuSelection() {
       networkManager.disconnect();
       isMultiplayerMode = false;
       waitingForGameStart = false;
+      opponentDisconnected = false;
       mainMenu.setState(MenuState::MULTIPLAYER_MENU);
       break;
 
@@ -1743,6 +1819,7 @@ void GameEngine::handleControllerAxisMenu(sf::Joystick::Axis axis, float positio
 }
 
 void GameEngine::handleGameOverInput(sf::Event &event) {
+
   // Wpisywanie nazwy
   if (isTypingName && event.type == sf::Event::TextEntered) {
     if (event.text.unicode == '\b') { // Backspace
@@ -1936,6 +2013,11 @@ void GameEngine::applyTheme(ColorThemeType type) {
 }
 
 void GameEngine::updateMultiplayer(float deltaTime) {
+    // Nie aktualizuj jeśli gra się skończyła
+    if (gameState == GameState::MultiplayerGameOver) {
+        return;
+    }
+
     // Jeśli jesteśmy klientem i czekamy na start
     if (!networkManager.isHosting() && waitingForGameStart) {
         // Sprawdź czy host wysłał sygnał START
@@ -1953,12 +2035,11 @@ void GameEngine::updateMultiplayer(float deltaTime) {
                 opponentBoard.reset();
                 score.reset();
 
-                // DODAJ RESET LEVELU ↓↓↓
+                //Reset levelu
                 startLevel = 0;
                 currentLevel = 0;
                 totalLinesCleared = 0;
                 fallSpeed = getFallSpeedForLevel(0);
-                // ↑↑↑ KONIEC DODANEGO FRAGMENTU
 
                 nextQueue.clear();
                 for (int i = 0; i < 5; i++) {
@@ -1971,6 +2052,7 @@ void GameEngine::updateMultiplayer(float deltaTime) {
                 canHold = true;
                 boardSyncTimer = 0.0f;
 
+                gameState = GameState::MultiplayerPlaying;
                 spawnNewTetromino();
                 backgroundMusic.play();
             }
@@ -1999,16 +2081,62 @@ void GameEngine::updateMultiplayer(float deltaTime) {
     gameTimeSec += deltaTime;
     score.setGameTimeSeconds(gameTimeSec);
 
-    // Sprawdź ataki od przeciwnika
-    checkForIncomingAttacks();
+    // Odbieraj WSZYSTKIE pakiety
+    sf::Packet packet;
+    while (networkManager.receivePacket(packet)) {
+        uint8_t msgType;
+        packet >> msgType;
 
-    // Sprawdź czy przeciwnik przegrał
-    if (networkManager.receivedOpponentGameOver()) {
-        std::cout << "[Multiplayer] Wygrałeś!\n";
-        disconnectReason = "You Win!";
-        gameState = GameState::MultiplayerGameOver;
-        backgroundMusic.stop();
-        return;
+        switch (static_cast<MessageType>(msgType)) {
+        case MessageType::GAME_OVER:
+            std::cout << "[Multiplayer] Przeciwnik przegrał - Wygrałeś!\n";
+            disconnectReason = "You Win!";
+            gameState = GameState::MultiplayerGameOver;
+            backgroundMusic.stop();
+            return;
+
+        case MessageType::LINES_CLEARED: {
+            int32_t lineCount;
+            packet >> lineCount;
+            if (lineCount > 0) {
+                std::cout << "[Multiplayer] Otrzymano atak! Dodawanie " << lineCount << " linii\n";
+                board.addPenaltyLines(lineCount);
+            }
+            break;
+        }
+
+        case MessageType::BOARD_STATE: {
+            // Odbierz rozmiar
+            uint32_t rows, cols;
+            packet >> rows >> cols;
+
+            // Odbierz dane
+            std::vector<std::vector<int>> opponentState;
+            opponentState.resize(rows, std::vector<int>(cols));
+
+            for (uint32_t r = 0; r < rows; r++) {
+                for (uint32_t c = 0; c < cols; c++) {
+                    int32_t cell;
+                    packet >> cell;
+                    opponentState[r][c] = cell;
+                }
+            }
+
+            opponentBoard.setBoardState(opponentState);
+            break;
+        }
+
+        case MessageType::DISCONNECT:
+            std::cout << "[Multiplayer] Przeciwnik się rozłączył\n";
+            opponentDisconnected = true;
+            disconnectReason = "Opponent Disconnected";
+            gameState = GameState::MultiplayerGameOver;
+            backgroundMusic.stop();
+            return;
+
+        default:
+            break;
+        }
     }
 
     // Sprawdź rozłączenie
@@ -2165,8 +2293,8 @@ void GameEngine::renderMultiplayer() {
 }
 
 void GameEngine::renderOpponentBoard(sf::RenderWindow& window) const {
-    const int CELL_SIZE = 15;  // Mniejszy rozmiar dla planszy przeciwnika
-    const int offsetX = 580;   // Prawa strona ekranu
+    const int CELL_SIZE = 15;
+    const int offsetX = 580;
     const int offsetY = 170;
 
     sf::RectangleShape cell(sf::Vector2f(CELL_SIZE - 1, CELL_SIZE - 1));
@@ -2180,7 +2308,7 @@ void GameEngine::renderOpponentBoard(sf::RenderWindow& window) const {
     title.setPosition(offsetX, offsetY - 30);
     window.draw(title);
 
-    // Ramka wokół planszy
+    // Ramka
     sf::RectangleShape border(sf::Vector2f(Board::COLS * CELL_SIZE,
         (Board::ROWS - Board::HIDDEN_ROWS) * CELL_SIZE));
     border.setPosition(offsetX, offsetY);
@@ -2189,7 +2317,7 @@ void GameEngine::renderOpponentBoard(sf::RenderWindow& window) const {
     border.setOutlineColor(currentTheme.text);
     window.draw(border);
 
-    // Rysuj planszę przeciwnika
+    // Rysuj planszę
     for (int row = Board::HIDDEN_ROWS; row < Board::ROWS; row++) {
         for (int col = 0; col < Board::COLS; col++) {
             cell.setPosition(offsetX + col * CELL_SIZE,
@@ -2203,18 +2331,24 @@ void GameEngine::renderOpponentBoard(sf::RenderWindow& window) const {
                 cell.setOutlineColor(currentTheme.panel);
             }
             else {
-                // Użyj koloru z motywu dla typu klocka
-                switch (cellType) {
-                case TetrominoType::I: cell.setFillColor(currentTheme.I); break;
-                case TetrominoType::O: cell.setFillColor(currentTheme.O); break;
-                case TetrominoType::T: cell.setFillColor(currentTheme.T); break;
-                case TetrominoType::S: cell.setFillColor(currentTheme.S); break;
-                case TetrominoType::Z: cell.setFillColor(currentTheme.Z); break;
-                case TetrominoType::J: cell.setFillColor(currentTheme.J); break;
-                case TetrominoType::L: cell.setFillColor(currentTheme.L); break;
-                default: cell.setFillColor(currentTheme.text); break;
+                if (static_cast<int>(cellType) == 7) {
+                    cell.setFillColor(sf::Color(120, 120, 120));
+                    cell.setOutlineThickness(0);
                 }
-                cell.setOutlineThickness(0);
+                else {
+                    switch (cellType) {
+                    case TetrominoType::I: cell.setFillColor(currentTheme.I); break;
+                    case TetrominoType::O: cell.setFillColor(currentTheme.O); break;
+                    case TetrominoType::T: cell.setFillColor(currentTheme.T); break;
+                    case TetrominoType::S: cell.setFillColor(currentTheme.S); break;
+                    case TetrominoType::Z: cell.setFillColor(currentTheme.Z); break;
+                    case TetrominoType::J: cell.setFillColor(currentTheme.J); break;
+                    case TetrominoType::L: cell.setFillColor(currentTheme.L); break;
+                    case TetrominoType::P: cell.setFillColor(currentTheme.P); break;
+                    default: cell.setFillColor(currentTheme.text); break;
+                    }
+                    cell.setOutlineThickness(0);
+                }
             }
 
             window.draw(cell);

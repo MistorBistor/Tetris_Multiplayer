@@ -135,34 +135,44 @@ void Menu::setState(MenuState state) {
 }
 
 void Menu::moveUp() {
+    if (currentState == MenuState::MAIN_MENU) {
+        selectedIndex--;
+        if (selectedIndex < 0)
+            selectedIndex = 4;
+        return;
+    }
     if (currentState == MenuState::DIFFICULTY_SELECTION) {
         selectedDifficultyElement--;
         if (selectedDifficultyElement < 0)
             selectedDifficultyElement = 2;
         return;
     }
-
     if (currentState == MenuState::MULTIPLAYER_HOST) {
         lobbyUISelectedElement--;
         if (lobbyUISelectedElement < 0)
             lobbyUISelectedElement = 2;
         return;
     }
-
     if (currentState == MenuState::MULTIPLAYER_JOIN) {
         selectedIndex--;
         if (selectedIndex < 0)
-            selectedIndex = (int)availableLobbies.size(); // +1 for back button
+            selectedIndex = (int)availableLobbies.size();
         return;
     }
-
     if (currentState == MenuState::MULTIPLAYER_LOBBY) {
         selectedIndex--;
         if (selectedIndex < 0)
-            selectedIndex = 1; // Start/Quit toggle
+            selectedIndex = 1;
+        return;
+    }
+    if (currentState == MenuState::MULTIPLAYER_PAUSE) {
+        selectedIndex--;
+        if (selectedIndex < 0)
+            selectedIndex = 2;  // 3 opcje (0-2)
         return;
     }
 
+    // Domyślna obsługa dla innych menu
     selectedIndex--;
     if (selectedIndex < 0) {
         selectedIndex = (int)menuItems.size() - 1;
@@ -170,34 +180,44 @@ void Menu::moveUp() {
 }
 
 void Menu::moveDown() {
+    if (currentState == MenuState::MAIN_MENU) {
+        selectedIndex++;
+        if (selectedIndex > 4)
+            selectedIndex = 0;
+        return;
+    }
     if (currentState == MenuState::DIFFICULTY_SELECTION) {
         selectedDifficultyElement++;
         if (selectedDifficultyElement > 2)
             selectedDifficultyElement = 0;
         return;
     }
-
     if (currentState == MenuState::MULTIPLAYER_HOST) {
         lobbyUISelectedElement++;
         if (lobbyUISelectedElement > 2)
             lobbyUISelectedElement = 0;
         return;
     }
-
     if (currentState == MenuState::MULTIPLAYER_JOIN) {
         selectedIndex++;
         if (selectedIndex > (int)availableLobbies.size())
             selectedIndex = 0;
         return;
     }
-
     if (currentState == MenuState::MULTIPLAYER_LOBBY) {
         selectedIndex++;
         if (selectedIndex > 1)
             selectedIndex = 0;
         return;
     }
+    if (currentState == MenuState::MULTIPLAYER_PAUSE) {
+        selectedIndex++;
+        if (selectedIndex > 2)  // 3 opcje (0-2)
+            selectedIndex = 0;
+        return;
+    }
 
+    // Domyślna obsługa dla innych menu
     selectedIndex++;
     if (selectedIndex >= (int)menuItems.size()) {
         selectedIndex = 0;
@@ -260,6 +280,18 @@ MenuAction Menu::handleSelection() {
         if (selectedIndex == 3) return MenuAction::EXIT;
         break;
 
+    case MenuState::MULTIPLAYER_PAUSE:
+        if (selectedIndex == 0) {
+            return MenuAction::RESUME;
+        }
+        else if (selectedIndex == 1) {
+            return MenuAction::MAIN_MENU;
+        }
+        else if (selectedIndex == 2) {
+            return MenuAction::EXIT;
+        }
+        break;
+
     case MenuState::SETTINGS:
         if (selectedIndex == 0) {
             selectedTheme = (selectedTheme + 1) % 3;
@@ -272,7 +304,6 @@ MenuAction Menu::handleSelection() {
         }
         break;
 
-        // NOWE:
     case MenuState::MULTIPLAYER_MENU:
         if (selectedIndex == 0) return MenuAction::HOST_GAME;
         if (selectedIndex == 1) return MenuAction::JOIN_GAME;
@@ -311,6 +342,9 @@ MenuAction Menu::handleSelection() {
             setState(MenuState::MULTIPLAYER_MENU);
             return MenuAction::NONE;
         }
+        break;
+
+    default:
         break;
     }
 
@@ -776,4 +810,67 @@ void Menu::renderMultiplayerJoin(sf::RenderWindow& window) const {
     hint.setOrigin(hb.left + hb.width / 2.f, hb.top + hb.height / 2.f);
     hint.setPosition(400.f, 780.f);
     window.draw(hint);
+}
+
+void Menu::renderMultiplayerPause(sf::RenderWindow& window) {
+    // Półprzeźroczyste tło
+    sf::RectangleShape overlay(sf::Vector2f(800, 850));
+    overlay.setPosition(0, 0);
+    overlay.setFillColor(sf::Color(0, 0, 0, 150));
+    window.draw(overlay);
+
+    // Tytuł "PAUSED"
+    sf::Text title;
+    title.setFont(font);
+    title.setString("PAUSED");
+    title.setCharacterSize(40);
+    title.setFillColor(currentTheme.highlight);
+    title.setStyle(sf::Text::Bold);
+
+    sf::FloatRect titleBounds = title.getLocalBounds();
+    title.setOrigin(titleBounds.left + titleBounds.width / 2.f,
+        titleBounds.top + titleBounds.height / 2.f);
+    title.setPosition(400.f, 250.f);
+    window.draw(title);
+
+    // Opcje menu
+    std::vector<std::string> options = { "Resume", "Main Menu", "Exit" };
+
+    const float startY = 350.f;
+    const float spacing = 60.f;
+
+    for (size_t i = 0; i < options.size(); i++) {
+        sf::Text optionText;
+        optionText.setFont(font);
+        optionText.setString(options[i]);
+        optionText.setCharacterSize(24);
+
+        // ZMIEŃ: użyj selectedIndex zamiast selectedOption
+        if (i == static_cast<size_t>(selectedIndex)) {
+            optionText.setFillColor(currentTheme.highlight);
+            optionText.setStyle(sf::Text::Bold);
+        }
+        else {
+            optionText.setFillColor(currentTheme.text);
+        }
+
+        sf::FloatRect bounds = optionText.getLocalBounds();
+        optionText.setOrigin(bounds.left + bounds.width / 2.f,
+            bounds.top + bounds.height / 2.f);
+        optionText.setPosition(400.f, startY + i * spacing);
+        window.draw(optionText);
+    }
+
+    // Tekst informacyjny
+    sf::Text infoText;
+    infoText.setFont(font);
+    infoText.setString("Game continues while paused");
+    infoText.setCharacterSize(16);
+    infoText.setFillColor(sf::Color(200, 200, 200));
+
+    sf::FloatRect infoBounds = infoText.getLocalBounds();
+    infoText.setOrigin(infoBounds.left + infoBounds.width / 2.f,
+        infoBounds.top + infoBounds.height / 2.f);
+    infoText.setPosition(400.f, 550.f);
+    window.draw(infoText);
 }

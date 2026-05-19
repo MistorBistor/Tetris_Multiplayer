@@ -99,11 +99,11 @@ void Board::lockTetromino(int x, int y, const std::vector<std::vector<int>> &sha
     }
   }
 }
+
 /**
  * Sprawdza czy cały klocek może być umieszczony w danej pozycji.
  */
-bool Board::canPlaceTetromino(
-    int x, int y, const std::vector<std::vector<int>> &shape) const {
+bool Board::canPlaceTetromino(int x, int y, const std::vector<std::vector<int>> &shape) const {
   for (int row = 0; row < 4; row++) {
     for (int col = 0; col < 4; col++) {
       if (shape[row][col] == 1) { // Tylko wypełnione komórki
@@ -289,8 +289,10 @@ sf::Color Board::getColorForType(TetrominoType type) {
     return currentTheme.J;
   case TetrominoType::L:
     return currentTheme.L;
+  case TetrominoType::P:
+    return currentTheme.P;
   default:
-    return sf::Color::Transparent;
+      return sf::Color::Transparent;
   }
 }
 
@@ -320,8 +322,8 @@ void Board::addPenaltyLines(int lineCount) {
                 grid[rowIndex][col] = TetrominoType::Empty;  // Dziura
             }
             else {
-                // Szary klocek - użyjemy typu I jako placeholder dla szarego
-                grid[rowIndex][col] = TetrominoType::I;  // TODO: możesz dodać TetrominoType::Gray
+                // Szary klocek
+                grid[rowIndex][col] = TetrominoType::P;
             }
         }
     }

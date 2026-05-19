@@ -3,7 +3,7 @@
 #include <thread>
 
 NetworkManager::NetworkManager()
-    : isHost(false), tcpPort(54000), connected(false) {
+    : isHost(false), tcpPort(54000), connected(false), playerSocket(std::make_unique<sf::TcpSocket>()) {
     std::cout << "[NetworkManager] Inicjalizacja\n";
 }
 
@@ -14,25 +14,38 @@ NetworkManager::~NetworkManager() { disconnect(); }
 bool NetworkManager::createLobby(const std::string& name) {
     std::cout << "[NetworkManager] Tworzenie lobby: " << name << "\n";
 
+    // ===== KOMPLETNY RESET WSZYSTKIEGO ===== ↓↓↓
+    // Zamknij stary socket gracza
+    playerSocket->disconnect();
+
+    // WAŻNE: Zamknij listener i otwórz go ponownie
+    listener.close();
+
+    // Zamknij UDP
+    udpSocket.unbind();
+
+    // Stwórz NOWY socket gracza
+    playerSocket = std::make_unique<sf::TcpSocket>();
+
+    // Reset flag
+    connected = false;
     isHost = true;
     lobbyName = name;
-    connected = false;
 
-    // Bind listener na dowolnym dostępnym porcie
+    std::cout << "[NetworkManager] Kompletny reset socketów wykonany\n";
+    // ===== KONIEC RESETU ===== ↑↑↑
+
+    // Otwórz listener NA NOWO
     if (listener.listen(tcpPort) != sf::Socket::Done) {
         std::cout << "[NetworkManager ERROR] Nie można nasłuchiwać na porcie "
             << tcpPort << "\n";
         return false;
     }
 
-    // Ustaw non-blocking żeby nie blokować głównej pętli
     listener.setBlocking(false);
+    std::cout << "[NetworkManager] Listener otwarty na porcie " << tcpPort << "\n";
 
-    std::cout << "[NetworkManager] Lobby stworzone na porcie " << tcpPort
-        << "\n";
-
-    // Bind UDP socket do broadcastowania - spróbuj bind na BROADCAST_PORT
-    // Jeśli zajęty, użyj AnyPort
+    // Bind UDP
     if (udpSocket.bind(BROADCAST_PORT) != sf::Socket::Done) {
         std::cout << "[NetworkManager] Port " << BROADCAST_PORT << " zajęty, próba z AnyPort\n";
         if (udpSocket.bind(sf::Socket::AnyPort) != sf::Socket::Done) {
@@ -42,7 +55,6 @@ bool NetworkManager::createLobby(const std::string& name) {
     }
 
     udpSocket.setBlocking(false);
-
     std::cout << "[NetworkManager] UDP socket zbindowany na porcie "
         << udpSocket.getLocalPort() << "\n";
 
@@ -50,18 +62,38 @@ bool NetworkManager::createLobby(const std::string& name) {
 }
 
 bool NetworkManager::listenForClient() {
-    if (!isHost || connected) {
+    if (!isHost) {
         return false;
     }
 
-    // Sprawdź czy ktoś się łączy
-    if (listener.accept(playerSocket) == sf::Socket::Done) {
-        std::cout << "[NetworkManager] Klient się połączył: "
-            << playerSocket.getRemoteAddress() << "\n";
+    if (connected) {
+        static int skipCount = 0;
+        skipCount++;
+        if (skipCount % 1000 == 0) {
+            std::cout << "[NetworkManager] Pomijam listen - już połączony (skip=" << skipCount << ")\n";
+        }
+        return false;
+    }
 
-        playerSocket.setBlocking(false);
+    // DODAJ LOG PRZED accept ↓↓↓
+    static int acceptAttempts = 0;
+    acceptAttempts++;
+    // ↑↑↑
+
+    sf::Socket::Status status = listener.accept(*playerSocket);
+
+    if (status == sf::Socket::Done) {
+        std::cout << "[NetworkManager] Klient się połączył: "
+            << playerSocket->getRemoteAddress()
+            << " (po " << acceptAttempts << " próbach)\n";  // DODAJ licznik
+
+        playerSocket->setBlocking(false);
         connected = true;
+        acceptAttempts = 0;  // DODAJ reset
         return true;
+    }
+    else if (status == sf::Socket::Error) {
+        std::cout << "[NetworkManager ERROR] Błąd podczas accept() (próba " << acceptAttempts << ")\n";
     }
 
     return false;
@@ -163,22 +195,29 @@ std::vector<LobbyInfo> NetworkManager::searchLobbies(float timeoutSeconds) {
 }
 
 
-
 bool NetworkManager::joinLobby(const LobbyInfo& lobby) {
     std::cout << "[NetworkManager] Łączenie z lobby: " << lobby.name << " ("
         << lobby.hostIP << ":" << lobby.hostPort << ")\n";
 
+    // Stwórz NOWY socket
+    playerSocket = std::make_unique<sf::TcpSocket>();
+    connected = false;
+    std::cout << "[NetworkManager] Nowy socket stworzony\n";
+
     isHost = false;
     opponentIP = sf::IpAddress(lobby.hostIP);
 
-    // Połącz się z hostem
-    if (playerSocket.connect(opponentIP, lobby.hostPort, sf::seconds(5)) !=
-        sf::Socket::Done) {
-        std::cout << "[NetworkManager ERROR] Nie można połączyć się z hostem\n";
+    // ZWIĘKSZ TIMEOUT Z 5 NA 10 SEKUND ↓↓↓
+    std::cout << "[NetworkManager] Próba połączenia (timeout 10s)...\n";
+    sf::Socket::Status status = playerSocket->connect(opponentIP, lobby.hostPort, sf::seconds(10));
+
+    if (status != sf::Socket::Done) {
+        std::cout << "[NetworkManager ERROR] Nie można połączyć się z hostem (status="
+            << status << ")\n";
         return false;
     }
 
-    playerSocket.setBlocking(false);
+    playerSocket->setBlocking(false);
     connected = true;
 
     std::cout << "[NetworkManager] Połączono z hostem!\n";
@@ -315,31 +354,37 @@ bool NetworkManager::receivedOpponentGameOver() {
         return true;
     }
 
+    // WAŻNE: Jeśli to nie był GAME_OVER, pakiet został "zjedzony"
+    // To może powodować problemy z innymi pakietami
     return false;
 }
 
 void NetworkManager::disconnect() {
-    if (connected) {
-        std::cout << "[NetworkManager] Rozłączanie...\n";
+    std::cout << "[NetworkManager] Rozłączanie...\n";
 
-        // Wyślij informację o rozłączeniu
+    // Wyślij informację o rozłączeniu (jeśli connected)
+    if (connected) {
         sf::Packet packet;
         packet << static_cast<uint8_t>(MessageType::DISCONNECT);
         sendPacket(packet);
-
-        playerSocket.disconnect();
-        connected = false;
     }
+
+    // ZAWSZE zamknij wszystkie sockety
+    playerSocket->disconnect();
+    connected = false;
 
     if (isHost) {
         listener.close();
+        isHost = false;
     }
 
     udpSocket.unbind();
+
+    std::cout << "[NetworkManager] Rozłączono całkowicie\n";
 }
 
 bool NetworkManager::sendPacket(sf::Packet& packet) {
-    if (playerSocket.send(packet) != sf::Socket::Done) {
+    if (playerSocket->send(packet) != sf::Socket::Done) {
         std::cout << "[NetworkManager ERROR] Błąd wysyłania pakietu\n";
         return false;
     }
@@ -347,7 +392,7 @@ bool NetworkManager::sendPacket(sf::Packet& packet) {
 }
 
 bool NetworkManager::receivePacket(sf::Packet& packet) {
-    sf::Socket::Status status = playerSocket.receive(packet);
+    sf::Socket::Status status = playerSocket->receive(packet);
 
     if (status == sf::Socket::Done) {
         return true;
@@ -410,4 +455,17 @@ void NetworkManager::respondToBroadcastRequests() {
             }
         }
     }
+}
+
+void NetworkManager::resetConnection() {
+    std::cout << "[NetworkManager] Reset połączenia\n";
+
+    playerSocket->disconnect();
+    connected = false;
+
+    if (isHost) {
+        listener.close();
+    }
+
+    udpSocket.unbind();
 }

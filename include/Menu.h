@@ -20,10 +20,11 @@ enum class MenuState {
     GAME_OVER,
     SETTINGS,
     DIFFICULTY_SELECTION,
-    MULTIPLAYER_MENU,      // NOWY: Menu wyboru Host/Join
-    MULTIPLAYER_HOST,      // NOWY: Ekran tworzenia lobby
-    MULTIPLAYER_LOBBY,     // NOWY: Ekran oczekiwania na graczy
-    MULTIPLAYER_JOIN       // NOWY: Lista dostępnych lobby
+    MULTIPLAYER_MENU,      // Menu wyboru Host/Join
+    MULTIPLAYER_HOST,      // Ekran tworzenia lobby
+    MULTIPLAYER_LOBBY,     // Ekran oczekiwania na graczy
+    MULTIPLAYER_JOIN,       // Lista dostępnych lobby
+    MULTIPLAYER_PAUSE
 };
 /**
  * @enum MenuAction
@@ -206,6 +207,9 @@ public:
   void renderMultiplayerJoin(sf::RenderWindow& window) const;
 
   const std::vector<LobbyInfo>& getAvailableLobbies() const { return availableLobbies; }
+
+  // rendering dla multiplayer pause
+  void renderMultiplayerPause(sf::RenderWindow& window);
 };
 
 #endif // MENU_HPP

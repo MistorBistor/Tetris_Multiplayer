@@ -2,6 +2,7 @@
 #include <SFML/Network.hpp>
 #include <string>
 #include <vector>
+#include <memory>
 
 // Typy wiadomoœci sieciowych
 enum class MessageType : uint8_t {
@@ -40,7 +41,7 @@ private:
     std::string lobbyName;
 
     // Socket TCP dla po³¹czenia z drugim graczem
-    sf::TcpSocket playerSocket;
+    std::unique_ptr<sf::TcpSocket> playerSocket;
 
     // Listener dla hosta (nas³uchuje po³¹czeñ)
     sf::TcpListener listener;
@@ -125,4 +126,7 @@ public:
 
     // Host odpowiada na broadcast requesty
     void respondToBroadcastRequests();
+
+    // Reset po³¹czenia (dla ponownego hostowania)
+    void resetConnection();
 };
